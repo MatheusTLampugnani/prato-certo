@@ -5,13 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.pratocerto.model.ItemCompra
+import com.example.pratocerto.model.Alimento
 import com.example.pratocerto.network.RetrofitInstance
 import kotlinx.coroutines.launch
 
-class ListaComprasViewModel : ViewModel() {
+class AlimentosViewModel : ViewModel() {
 
-    var itens by mutableStateOf<List<ItemCompra>>(emptyList())
+    var alimentos by mutableStateOf<List<Alimento>>(emptyList())
         private set
 
     var carregando by mutableStateOf(false)
@@ -20,18 +20,27 @@ class ListaComprasViewModel : ViewModel() {
     var erro by mutableStateOf<String?>(null)
         private set
 
-    fun carregarItens() {
+    var termoPesquisa by mutableStateOf("")
+
+    fun buscar(termo: String) {
+        if (termo.isBlank()) return
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
-                val resposta = RetrofitInstance.api.listarItens()
-                itens = resposta.dados
+                val resposta = RetrofitInstance.api.buscarAlimentos(termo)
+                alimentos = resposta.dados
             } catch (e: Exception) {
-                erro = "Erro ao carregar: ${e.message}"
+                erro = "Erro de conexão: ${e.message}"
             } finally {
                 carregando = false
             }
         }
+    }
+
+    fun limpar() {
+        alimentos = emptyList()
+        termoPesquisa = ""
+        erro = null
     }
 }
