@@ -25,10 +25,27 @@ interface ApiService {
         @Body body: OrcamentoRequest
     ): RespostaOrcamento
 
-    // ── Lista ────────────────────────────────────────────────────────────────
-    @GET("api/listas/{id}")
-    suspend fun buscarLista(
+    @GET("api/orcamento")
+    suspend fun buscarOrcamento(
+        @Header("Authorization") token: String
+    ): RespostaOrcamento
+
+    // ── Cardápio / Listas ─────────────────────────────────────────────────────
+    @GET("api/cardapio")
+    suspend fun buscarCardapio(
+        @Header("Authorization") token: String
+    ): RespostaCardapio
+
+    @POST("api/listas")
+    suspend fun criarLista(
         @Header("Authorization") token: String,
-        @Path("id") id: Int
-    ): RespostaLista
+        @Body body: CriarListaRequest
+    ): RespostaCriarLista
+
+    @POST("api/listas/{id}/itens")
+    suspend fun adicionarItemLista(
+        @Header("Authorization") token: String,
+        @Path("id") idLista: Int,
+        @Body body: AdicionarItemRequest
+    ): RespostaAdicionarItem
 }

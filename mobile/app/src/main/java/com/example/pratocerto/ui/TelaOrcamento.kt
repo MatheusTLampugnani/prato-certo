@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,13 +26,14 @@ fun TelaOrcamento(
     onVoltar: () -> Unit,
     viewModel: OrcamentoViewModel = viewModel()
 ) {
-    var valor by remember { mutableStateOf("") }
-    var periodoSelecionado by remember { mutableStateOf("semanal") }
-    val periodos = listOf("diario" to "Diário", "semanal" to "Semanal", "quinzenal" to "Quinzenal", "mensal" to "Mensal")
+    var valorTexto by remember { mutableStateOf("") }
+    var periodoSelecionado by remember { mutableStateOf("Semanal") }
+    val periodos = listOf("Semanal", "Quinzenal", "Mensal")
 
-    LaunchedEffect(viewModel.salvoComSucesso) {
-        if (viewModel.salvoComSucesso) {
-            viewModel.resetSucesso()
+    // Observa o sucesso para voltar à tela principal
+    LaunchedEffect(viewModel.sucesso) {
+        if (viewModel.sucesso) {
+            viewModel.resetStatus()
             onVoltar()
         }
     }
@@ -42,102 +43,104 @@ fun TelaOrcamento(
             .fillMaxSize()
             .background(PratoCertoColors.Background)
     ) {
-        // Topbar
         TopAppBar(
-            title = { Text("Definir orçamento", fontWeight = FontWeight.SemiBold) },
-            navigationIcon = {
-                IconButton(onClick = onVoltar) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Wallet, contentDescription = null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Orçamento", fontWeight = FontWeight.SemiBold)
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.White
-            )
+            navigationIcon = {
+                IconButton(onClick = onVoltar) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
         )
 
         Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                "Defina seu limite de gastos para que possamos sugerir o cardápio ideal.",
+                fontSize = 13.sp,
+                color = PratoCertoColors.TextGray,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
-            // Card verde com ícone
-            Card(
+            OutlinedTextField(
+                value = valorTexto,
+                onValueChange = { valorTexto = it },
+                label = { Text("Valor disponível (R$)") },
+                placeholder = { Text("Ex: 250.00") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = PratoCertoColors.Green)
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = PratoCertoColors.PrimaryGreen,
+                    focusedLabelColor = PratoCertoColors.PrimaryGreen
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Período",
+                fontSize = 11.sp,
+                color = PratoCertoColors.TextGray,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.AttachMoney, null, tint = Color.White, modifier = Modifier.size(32.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Configure seu orçamento", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 15.sp)
-                        Text("Defina quanto você pode gastar com alimentação", color = Color.White.copy(0.85f), fontSize = 12.sp)
-                    }
+                periodos.forEach { periodo ->
+                    val selecionado = periodo == periodoSelecionado
+                    FilterChip(
+                        selected = selecionado,
+                        onClick = { periodoSelecionado = periodo },
+                        label = { Text(periodo) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = PratoCertoColors.PrimaryGreen,
+                            selectedLabelColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                 }
             }
 
             Spacer(Modifier.height(24.dp))
 
-            Text("Valor disponível (R\$)", fontSize = 13.sp, color = PratoCertoColors.TextGray, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(6.dp))
-            OutlinedTextField(
-                value = valor,
-                onValueChange = { valor = it.filter { c -> c.isDigit() || c == '.' } },
-                placeholder = { Text("Ex: 250.00") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PratoCertoColors.Green,
-                    focusedLabelColor = PratoCertoColors.Green
+            if (viewModel.erro != null) {
+                Text(
+                    viewModel.erro!!,
+                    color = Color.Red,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            )
-
-            Spacer(Modifier.height(20.dp))
-
-            Text("Período", fontSize = 13.sp, color = PratoCertoColors.TextGray, fontWeight = FontWeight.Medium)
-            Spacer(Modifier.height(8.dp))
-
-            // Chips de período
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                periodos.forEach { (valor, label) ->
-                    FilterChip(
-                        selected = periodoSelecionado == valor,
-                        onClick = { periodoSelecionado = valor },
-                        label = { Text(label, fontSize = 13.sp) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = PratoCertoColors.Green,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
             }
-
-            Spacer(Modifier.height(32.dp))
 
             Button(
                 onClick = {
-                    val v = valor.toDoubleOrNull()
-                    if (v != null && v > 0) viewModel.salvar(v, periodoSelecionado)
+                    // Substitui vírgula por ponto para evitar erro no parsing do Double
+                    val valorDouble = valorTexto.replace(",", ".").toDoubleOrNull()
+                    if (valorDouble != null) {
+                        viewModel.salvarOrcamento(valorDouble, periodoSelecionado)
+                    } else {
+                        // Pode adicionar um feedback visual se o usuário não digitar um número
+                    }
                 },
-                enabled = !viewModel.carregando && valor.isNotBlank(),
+                enabled = valorTexto.isNotBlank() && !viewModel.carregando,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
+                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.DarkButton)
             ) {
-                Text(
-                    if (viewModel.carregando) "Salvando…" else "Salvar orçamento",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
-                )
-            }
-
-            viewModel.erro?.let {
-                Spacer(Modifier.height(12.dp))
-                Text(it, color = Color.Red, fontSize = 13.sp)
+                if (viewModel.carregando) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Salvar Orçamento", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

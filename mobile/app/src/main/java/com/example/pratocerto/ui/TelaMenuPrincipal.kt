@@ -3,151 +3,266 @@ package com.example.pratocerto.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pratocerto.ui.components.BottomNavFloating
 import com.example.pratocerto.ui.theme.PratoCertoColors
-import com.example.pratocerto.util.SessionManager
+import com.example.pratocerto.viewmodel.CardapioViewModel
 
 @Composable
 fun TelaMenuPrincipal(
+    onIrCardapio: () -> Unit,
     onIrOrcamento: () -> Unit,
     onIrPesquisa: () -> Unit,
-    onIrCardapio: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigate: (String) -> Unit,
+    viewModel: CardapioViewModel = viewModel()
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PratoCertoColors.Background)
-    ) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(PratoCertoColors.Green)
-                .padding(24.dp)
-        ) {
-            Column {
-                Text(
-                    "🥗 Prato Certo",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    "Olá, ${SessionManager.nomeUsuario.ifEmpty { "usuário" }}!",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // ── Atualizar sempre que o ecrã voltar ao foco (ON_RESUME) ───────────────
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.carregarOrcamento()
+                viewModel.carregarCardapio()
             }
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
+    // ── Cálculos Dinâmicos ───────────────────────────────────────────────────
+    val orcamentoDefinido = viewModel.orcamentoValor ?: 0.0
+    val totalGasto = viewModel.listasCardapio.sumOf { cardapio ->
+        cardapio.listaItens.sumOf { it.precoCalculado }
+    }
+    val saldoRestante = orcamentoDefinido - totalGasto
+    val progressoOrcamento = if (orcamentoDefinido > 0.0) {
+        (totalGasto / orcamentoDefinido).toFloat().coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
+    val totalItensCompras = viewModel.listasCardapio.sumOf { it.listaItens.size }
+
+    // Cálculo de macros baseado na porção de gramas (assumindo que a base de dados TACO é por 100g)
+    val totalCalorias = viewModel.listasCardapio.sumOf { cardapio ->
+        cardapio.listaItens.sumOf { item ->
+            val kcalPor100g = item.alimentos?.calorias ?: 0.0
+            (kcalPor100g / 100.0) * item.quantidadeGramas
+        }
+    }
+
+    val totalProteinas = viewModel.listasCardapio.sumOf { cardapio ->
+        cardapio.listaItens.sumOf { item ->
+            val protPor100g = item.alimentos?.proteinas ?: 0.0
+            (protPor100g / 100.0) * item.quantidadeGramas
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavFloating(
+                telaAtual = "menu_principal",
+                onNavigate = onNavigate
+            )
+        }
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(paddingValues)
+                .background(PratoCertoColors.Background)
         ) {
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                "O que você quer fazer?",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF333333)
-            )
-
-            CardMenu(
-                icone = Icons.Default.AttachMoney,
-                titulo = "Definir orçamento",
-                descricao = "Configure quanto você tem para gastar",
-                cor = Color(0xFF4CAF50),
-                onClick = onIrOrcamento
-            )
-
-            CardMenu(
-                icone = Icons.Default.Search,
-                titulo = "Pesquisar alimentos",
-                descricao = "Busque alimentos com info nutricional e preço",
-                cor = Color(0xFF2196F3),
-                onClick = onIrPesquisa
-            )
-
-            CardMenu(
-                icone = Icons.Default.List,
-                titulo = "Meu cardápio / Lista",
-                descricao = "Veja os itens da sua lista de compras",
-                cor = Color(0xFFFF9800),
-                onClick = onIrCardapio
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            // Logout
-            TextButton(
-                onClick = {
-                    SessionManager.limpar()
-                    onLogout()
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+            // Header Top
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.ExitToApp,
+                    Icons.Default.Menu,
                     contentDescription = null,
-                    tint = PratoCertoColors.TextGray
+                    modifier = Modifier.size(24.dp)
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Sair da conta", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                Text("Resumo Diário", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.Gray)
+                )
             }
-        }
-    }
-}
 
-@Composable
-private fun CardMenu(
-    icone: ImageVector,
-    titulo: String,
-    descricao: String,
-    cor: Color,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+            // Card 1: Orçamento Dinâmico
+            Card(
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(cor.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .clickable { onIrOrcamento() },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Icon(icone, contentDescription = null, tint = cor, modifier = Modifier.size(26.dp))
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(PratoCertoColors.IconBoxBg, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Wallet, null, tint = PratoCertoColors.PrimaryGreen)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Orçamento Guardado", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(
+                            "Disponível: R$ ${"%.2f".format(if (saldoRestante < 0) 0.0 else saldoRestante)} de R$ ${"%.2f".format(orcamentoDefinido)}",
+                            fontSize = 11.sp,
+                            color = if (saldoRestante < 0) Color.Red else PratoCertoColors.TextGray
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { progressoOrcamento },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = if (saldoRestante < 0) Color.Red else PratoCertoColors.PrimaryGreen,
+                            trackColor = Color(0xFFEEEEEE)
+                        )
+                    }
+                }
             }
-            Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(titulo, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = Color(0xFF222222))
-                Text(descricao, fontSize = 12.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(top = 2.dp))
+
+            // Card 2: Macros Dinâmicos
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .clickable { onIrCardapio() },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(PratoCertoColors.IconBoxBg, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🥗", fontSize = 28.sp)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("Macros do Cardápio", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("${"%.0f".format(totalCalorias)} kcal no total", fontSize = 11.sp, color = PratoCertoColors.TextGray)
+                        Text("Proteínas: ${"%.1f".format(totalProteinas)}g", fontSize = 11.sp, color = PratoCertoColors.TextGray)
+                    }
+                }
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFCCCCCC))
+
+            // Card 3: Lista de Compras Dinâmica
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .clickable { onNavigate("lista_compras") },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .background(PratoCertoColors.IconBoxBg, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ShoppingBag, null, tint = PratoCertoColors.PrimaryGreen)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("Lista de Compras", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text("$totalItensCompras itens no cardápio", fontSize = 11.sp, color = PratoCertoColors.TextGray)
+                        Text(
+                            "Gasto total: R$ ${"%.2f".format(totalGasto)}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PratoCertoColors.TextGreen,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Botões de Ação Rápida
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onIrPesquisa,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = PratoCertoColors.TextGreen)
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Buscar TACO", fontSize = 13.sp)
+                }
+
+                Button(
+                    onClick = { },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.DarkButton)
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Escanear", fontSize = 13.sp)
+                }
+            }
         }
     }
 }

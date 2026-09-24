@@ -11,6 +11,7 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || '472FuXFoFWtjkSZFwAerJ3ZR9O3PKnwpG/3sOh2kMwT/2yVUa3rlHJboLX4QCpOJVveVxOKki+HhMFfwoGMVHA==';
 
+// ── Teste Banco ──────────────────────────────────────────────────────────
 app.get('/api/teste-banco', async (req, res) => {
     try {
         const { data, error } = await supabase.from('alimentos').select('*').limit(1);
@@ -21,6 +22,7 @@ app.get('/api/teste-banco', async (req, res) => {
     }
 });
 
+// ── Popular Banco ────────────────────────────────────────────────────────
 app.post('/api/popular-banco', async (req, res) => {
     try {
         const alimentosTaco = TacoService.alimentos;
@@ -53,6 +55,7 @@ app.post('/api/popular-banco', async (req, res) => {
     }
 });
 
+// ── Alimentos ────────────────────────────────────────────────────────────
 app.get('/api/alimentos', async (req, res) => {
     const { pesquisa } = req.query;
     if (!pesquisa) return res.status(400).json({ sucesso: false, erro: 'Envie um termo de pesquisa.' });
@@ -71,6 +74,7 @@ app.get('/api/alimentos', async (req, res) => {
     }
 });
 
+// ── Autenticação ─────────────────────────────────────────────────────────
 app.post('/api/auth/registrar', async (req, res) => {
     const { nome, email, senha } = req.body;
     if (!nome || !email || !senha) return res.status(400).json({ sucesso: false, erro: 'Preencha todos os campos.' });
@@ -80,7 +84,7 @@ app.post('/api/auth/registrar', async (req, res) => {
             .from('usuarios')
             .select('id')
             .eq('email', email)
-            .single();
+            .maybeSingle();
 
         if (usuarioExistente) return res.status(400).json({ sucesso: false, erro: 'Este e-mail já está cadastrado.' });
 
@@ -96,6 +100,7 @@ app.post('/api/auth/registrar', async (req, res) => {
         if (error) throw error;
         res.status(201).json({ sucesso: true, mensagem: 'Usuário cadastrado com sucesso!', usuario: data });
     } catch (error) {
+        console.error("Erro no registo:", error);
         res.status(500).json({ sucesso: false, erro: error.message });
     }
 });
@@ -109,7 +114,7 @@ app.post('/api/auth/login', async (req, res) => {
             .from('usuarios')
             .select('*')
             .eq('email', email)
-            .single();
+            .maybeSingle();
 
         if (error || !usuario) return res.status(401).json({ sucesso: false, erro: 'E-mail ou senha inválidos.' });
 
@@ -129,51 +134,76 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// ── Orçamento ────────────────────────────────────────────────────────────
 app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
     const { valor, periodo } = req.body;
-    const usuario_id = req.usuarioId; 
-
-    if (!valor || !periodo) {
-        return res.status(400).json({ sucesso: false, erro: 'Informe o valor e o período.' });
-    }
 
     try {
-        const { data: orcamentoExistente } = await supabase
+        // 1. Verifica se o usuário já tem um orçamento salvo
+        const { data: existente } = await supabase
             .from('orcamentos')
             .select('id')
             .eq('usuario_id', usuario_id)
-            .single();
+            .maybeSingle();
 
-        let resultado;
-
-        if (orcamentoExistente) {
-            const { data, error } = await supabase
+        if (existente) {
+            // 2. Se já existir, atualiza o valor
+            const { error: erroUpdate } = await supabase
                 .from('orcamentos')
-                .update({ valor, periodo, atualizado_em: new Date() })
-                .eq('usuario_id', usuario_id)
-                .select()
-                .single();
-            if (error) throw error;
-            resultado = data;
+                .update({ valor, periodo })
+                .eq('usuario_id', usuario_id);
+            
+            if (erroUpdate) throw erroUpdate;
         } else {
-            const { data, error } = await supabase
+            // 3. Se não existir, cria um novo registro
+            const { error: erroInsert } = await supabase
                 .from('orcamentos')
-                .insert([{ usuario_id, valor, periodo }])
-                .select()
-                .single();
-            if (error) throw error;
-            resultado = data;
+                .insert([{ usuario_id, valor, periodo }]);
+            
+            if (erroInsert) throw erroInsert;
         }
 
-        res.json({ sucesso: true, mensagem: 'Orçamento salvo!', orcamento: resultado });
+        res.json({ sucesso: true, mensagem: "Orçamento salvo com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao salvar orçamento:", error);
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── Cardápio / Listas (Adicionada a rota em falta) ────────────────────────
+app.get('/api/cardapio', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+
+    try {
+        const { data: listas, error } = await supabase
+            .from('listas')
+            .select(`
+                id,
+                titulo_lista,
+                tipo,
+                criado_em,
+                lista_itens (
+                    id,
+                    quantidade_gramas,
+                    preco_calculado,
+                    alimentos ( nome_descricao, calorias, proteinas )
+                )
+            `)
+            .eq('usuario_id', usuario_id);
+
+        if (error) throw error;
+
+        res.json({ sucesso: true, dados: listas || [] });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
 });
 
+// ── Listas ───────────────────────────────────────────────────────────────
 app.post('/api/listas', verificarAutenticacao, async (req, res) => {
     const { titulo_lista, tipo } = req.body;
-    const usuario_id = req.usuarioId; // ID vem do token JWT
+    const usuario_id = req.usuarioId;
 
     if (!titulo_lista) {
         return res.status(400).json({ sucesso: false, erro: 'Informe o título da lista.' });
@@ -198,7 +228,7 @@ app.post('/api/listas', verificarAutenticacao, async (req, res) => {
 });
 
 app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
-    const lista_id = req.params.id; // Pega o ID da lista na URL
+    const lista_id = req.params.id;
     const { alimento_id, quantidade_gramas } = req.body;
 
     if (!alimento_id || !quantidade_gramas) {
@@ -210,7 +240,7 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
             .from('precos')
             .select('preco_medio')
             .eq('alimento_id', alimento_id)
-            .single();
+            .maybeSingle();
 
         if (precoError || !precoData) {
             return res.status(404).json({ sucesso: false, erro: 'Preço do alimento não encontrado.' });
@@ -259,7 +289,7 @@ app.get('/api/listas/:id', verificarAutenticacao, async (req, res) => {
             `)
             .eq('id', lista_id)
             .eq('usuario_id', usuario_id)
-            .single();
+            .maybeSingle();
 
         if (error || !lista) {
             return res.status(404).json({ sucesso: false, erro: 'Lista não encontrada.' });
@@ -278,6 +308,24 @@ app.get('/api/listas/:id', verificarAutenticacao, async (req, res) => {
                 itens: lista.lista_itens
             }
         });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── Obter Orçamento Atual ────────────────────────────────────────────────
+app.get('/api/orcamento', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+
+    try {
+        const { data, error } = await supabase
+            .from('orcamentos')
+            .select('*')
+            .eq('usuario_id', usuario_id)
+            .maybeSingle();
+
+        if (error) throw error;
+        res.json({ sucesso: true, orcamento: data });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }

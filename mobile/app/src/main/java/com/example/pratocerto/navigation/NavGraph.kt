@@ -1,58 +1,67 @@
 package com.example.pratocerto.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.pratocerto.ui.*
-
-object Rotas {
-    const val LOGIN = "login"
-    const val MENU = "menu"
-    const val ORCAMENTO = "orcamento"
-    const val PESQUISA = "pesquisa"
-    const val CARDAPIO = "cardapio"
-}
+import com.example.pratocerto.ui.TelaCadastroLogin
+import com.example.pratocerto.ui.TelaCardapio
+import com.example.pratocerto.ui.TelaMenuPrincipal
+import com.example.pratocerto.ui.TelaOrcamento
+import com.example.pratocerto.ui.TelaPesquisaAlimentos
 
 @Composable
-fun NavGraph() {
-    val navController = rememberNavController()
-
-    NavHost(navController = navController, startDestination = Rotas.LOGIN) {
-
-        composable(Rotas.LOGIN) {
+fun NavGraph(navController: NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = "auth"
+    ) {
+        composable("auth") {
             TelaCadastroLogin(
                 onLoginSucesso = {
-                    navController.navigate(Rotas.MENU) {
-                        popUpTo(Rotas.LOGIN) { inclusive = true }
+                    navController.navigate("menu_principal") {
+                        popUpTo("auth") { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Rotas.MENU) {
+        composable("menu_principal") {
             TelaMenuPrincipal(
-                onIrOrcamento = { navController.navigate(Rotas.ORCAMENTO) },
-                onIrPesquisa = { navController.navigate(Rotas.PESQUISA) },
-                onIrCardapio = { navController.navigate(Rotas.CARDAPIO) },
+                onIrCardapio = { navController.navigate("cardapio") },
+                onIrOrcamento = { navController.navigate("orcamento") },
+                onIrPesquisa = { navController.navigate("pesquisa") },
                 onLogout = {
-                    navController.navigate(Rotas.LOGIN) {
-                        popUpTo(Rotas.MENU) { inclusive = true }
+                    navController.navigate("auth") {
+                        popUpTo("menu_principal") { inclusive = true }
                     }
-                }
+                },
+                onNavigate = { destino -> navController.navigate(destino) }
             )
         }
 
-        composable(Rotas.ORCAMENTO) {
-            TelaOrcamento(onVoltar = { navController.popBackStack() })
+        composable("cardapio") {
+            TelaCardapio(
+                onVoltar = { navController.popBackStack() }
+            )
         }
 
-        composable(Rotas.PESQUISA) {
-            TelaPesquisaAlimentos(onVoltar = { navController.popBackStack() })
+        composable("orcamento") {
+            TelaOrcamento(
+                onVoltar = { navController.popBackStack() }
+            )
         }
 
-        composable(Rotas.CARDAPIO) {
-            TelaCardapio(onVoltar = { navController.popBackStack() })
+        composable("pesquisa") {
+            TelaPesquisaAlimentos(
+                onVoltar = { navController.popBackStack() }
+            )
+        }
+
+        composable("lista_compras") {
+            TelaCardapio(
+                onVoltar = { navController.popBackStack() }
+            )
         }
     }
 }

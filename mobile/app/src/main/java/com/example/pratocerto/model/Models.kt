@@ -67,18 +67,16 @@ data class OrcamentoRequest(
     val periodo: String
 )
 
-data class OrcamentoData(
-    val id: Int,
-    val usuario_id: Int,
-    val valor: Double,
-    val periodo: String
-)
-
 data class RespostaOrcamento(
     val sucesso: Boolean,
-    val mensagem: String? = null,
     val orcamento: OrcamentoData? = null,
     val erro: String? = null
+)
+
+data class OrcamentoData(
+    val id: Int? = null,
+    val valor: Double,
+    val periodo: String? = null
 )
 
 // ── Listas ─────────────────────────────────────────────────────────────────
@@ -106,5 +104,57 @@ data class ResumoLista(
 data class RespostaLista(
     val sucesso: Boolean,
     val resumo: ResumoLista? = null,
+    val erro: String? = null
+)
+
+// ── Cardápio ───────────────────────────────────────────────────────────────
+
+data class AlimentoDetalhado(
+    @SerializedName("nome_descricao") val nome: String,
+    val calorias: Double? = null,
+    val proteinas: Double? = null
+)
+
+data class ItemListaCardapio(
+    val id: Int,
+    @SerializedName("quantidade_gramas") val quantidadeGramas: Double,
+    @SerializedName("preco_calculado") val precoCalculado: Double,
+    val alimentos: AlimentoDetalhado? = null
+)
+
+data class CardapioItemData(
+    val id: Int,
+    @SerializedName("titulo_lista") val tituloLista: String,
+    val tipo: String,
+    @SerializedName("criado_em") val criadoEm: String? = null,
+    @SerializedName("lista_itens") val listaItens: List<ItemListaCardapio> = emptyList()
+)
+
+data class RespostaCardapio(
+    val sucesso: Boolean,
+    val dados: List<CardapioItemData> = emptyList(),
+    val erro: String? = null
+)
+
+data class CriarListaRequest(
+    val titulo_lista: String,
+    val tipo: String = "cardapio"
+)
+
+data class RespostaCriarLista(
+    val sucesso: Boolean,
+    val mensagem: String? = null,
+    val lista: CardapioItemData? = null,
+    val erro: String? = null
+)
+
+data class AdicionarItemRequest(
+    val alimento_id: Int,
+    val quantidade_gramas: Double
+)
+
+data class RespostaAdicionarItem(
+    val sucesso: Boolean,
+    val mensagem: String? = null,
     val erro: String? = null
 )

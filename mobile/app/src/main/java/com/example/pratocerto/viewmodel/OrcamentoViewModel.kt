@@ -11,27 +11,25 @@ import com.example.pratocerto.util.SessionManager
 import kotlinx.coroutines.launch
 
 class OrcamentoViewModel : ViewModel() {
-
     var carregando by mutableStateOf(false)
         private set
-
     var erro by mutableStateOf<String?>(null)
         private set
-
-    var salvoComSucesso by mutableStateOf(false)
+    var sucesso by mutableStateOf(false)
         private set
 
-    fun salvar(valor: Double, periodo: String) {
+    fun salvarOrcamento(valor: Double, periodo: String) {
         viewModelScope.launch {
             carregando = true
             erro = null
+            sucesso = false
             try {
                 val resposta = RetrofitInstance.api.salvarOrcamento(
                     token = SessionManager.bearer(),
                     body = OrcamentoRequest(valor, periodo)
                 )
                 if (resposta.sucesso) {
-                    salvoComSucesso = true
+                    sucesso = true
                 } else {
                     erro = resposta.erro ?: "Erro ao salvar orçamento."
                 }
@@ -43,5 +41,8 @@ class OrcamentoViewModel : ViewModel() {
         }
     }
 
-    fun resetSucesso() { salvoComSucesso = false }
+    fun resetStatus() {
+        sucesso = false
+        erro = null
+    }
 }

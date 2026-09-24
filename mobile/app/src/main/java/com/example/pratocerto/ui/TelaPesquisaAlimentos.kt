@@ -3,11 +3,13 @@ package com.example.pratocerto.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,21 +19,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.lazy.items
 import com.example.pratocerto.model.Alimento
+import com.example.pratocerto.model.CardapioItemData
 import com.example.pratocerto.ui.theme.PratoCertoColors
 import com.example.pratocerto.viewmodel.AlimentosViewModel
+import com.example.pratocerto.viewmodel.CardapioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TelaPesquisaAlimentos(
     onVoltar: () -> Unit,
-    viewModel: AlimentosViewModel = viewModel()
+    viewModel: AlimentosViewModel = viewModel(),
+    cardapioViewModel: CardapioViewModel = viewModel()
 ) {
     val teclado = LocalSoftwareKeyboardController.current
+
+    var alimentoSelecionado by remember { mutableStateOf<Alimento?>(null) }
+    var quantidadeGramasTexto by remember { mutableStateOf("100") }
+    var cardapioSelecionado by remember { mutableStateOf<CardapioItemData?>(null) }
+    var menuCardapioEfeito by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        cardapioViewModel.carregarCardapio()
+    }
 
     Column(
         modifier = Modifier
@@ -42,14 +56,13 @@ fun TelaPesquisaAlimentos(
             title = { Text("Pesquisar alimentos", fontWeight = FontWeight.SemiBold) },
             navigationIcon = {
                 IconButton(onClick = onVoltar) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
         )
 
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            // Campo de busca
             OutlinedTextField(
                 value = viewModel.termoPesquisa,
                 onValueChange = { viewModel.termoPesquisa = it },
@@ -120,17 +133,109 @@ fun TelaPesquisaAlimentos(
                 }
                 LazyColumn {
                     items(viewModel.alimentos) { alimento ->
-                        CardAlimento(alimento)
+                        CardAlimento(
+                            alimento = alimento,
+                            onAdicionar = {
+                                alimentoSelecionado = alimento
+                                if (cardapioViewModel.listasCardapio.isNotEmpty()) {
+                                    cardapioSelecionado = cardapioViewModel.listasCardapio.first()
+                                }
+                            }
+                        )
                         HorizontalDivider(color = PratoCertoColors.Divider)
                     }
                 }
             }
         }
     }
+
+    // ── Modal de Adicionar Alimento ao Cardápio ─────────────────────────────
+    alimentoSelecionado?.let { alimento ->
+        AlertDialog(
+            onDismissRequest = { alimentoSelecionado = null },
+            title = { Text("Adicionar ao Cardápio") },
+            text = {
+                Column {
+                    Text(alimento.nome, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(Modifier.height(12.dp))
+
+                    // Seleção da Lista / Cardápio
+                    Text("Selecione o Cardápio:", fontSize = 12.sp, color = PratoCertoColors.TextGray)
+                    Spacer(Modifier.height(4.dp))
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { menuCardapioEfeito = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(cardapioSelecionado?.tituloLista ?: "Selecione um cardápio")
+                        }
+
+                        DropdownMenu(
+                            expanded = menuCardapioEfeito,
+                            onDismissRequest = { menuCardapioEfeito = false }
+                        ) {
+                            cardapioViewModel.listasCardapio.forEach { cardapio ->
+                                DropdownMenuItem(
+                                    text = { Text(cardapio.tituloLista) },
+                                    onClick = {
+                                        cardapioSelecionado = cardapio
+                                        menuCardapioEfeito = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Quantidade em Gramas
+                    OutlinedTextField(
+                        value = quantidadeGramasTexto,
+                        onValueChange = { quantidadeGramasTexto = it },
+                        label = { Text("Quantidade (gramas)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val gramas = quantidadeGramasTexto.toDoubleOrNull() ?: 100.0
+                        val idLista = cardapioSelecionado?.id
+
+                        if (idLista != null) {
+                            cardapioViewModel.adicionarAlimentoNaLista(
+                                idLista = idLista,
+                                alimentoId = alimento.id,
+                                quantidadeGramas = gramas
+                            )
+                            alimentoSelecionado = null
+                        }
+                    },
+                    enabled = cardapioSelecionado != null && quantidadeGramasTexto.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
+                ) {
+                    Text("Adicionar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { alimentoSelecionado = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-private fun CardAlimento(alimento: Alimento) {
+private fun CardAlimento(
+    alimento: Alimento,
+    onAdicionar: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,6 +269,18 @@ private fun CardAlimento(alimento: Alimento) {
                 color = PratoCertoColors.TextGreen
             )
             Text("/100g", fontSize = 11.sp, color = PratoCertoColors.TextGray)
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        IconButton(
+            onClick = onAdicionar,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = PratoCertoColors.Green.copy(alpha = 0.1f),
+                contentColor = PratoCertoColors.Green
+            )
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Adicionar ao Cardápio")
         }
     }
 }
