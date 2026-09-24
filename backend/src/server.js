@@ -1,21 +1,21 @@
 const express = require('express');
-const supabase = require('./config/db');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const supabase = require('./config/db'); 
 const TacoService = require('./services/tacoService');
+const verificarAutenticacao = require('./middleware/auth'); 
 
 const app = express();
 app.use(express.json());
 
+const JWT_SECRET = process.env.JWT_SECRET || '472FuXFoFWtjkSZFwAerJ3ZR9O3PKnwpG/3sOh2kMwT/2yVUa3rlHJboLX4QCpOJVveVxOKki+HhMFfwoGMVHA==';
+
 app.get('/api/teste-banco', async (req, res) => {
     try {
         const { data, error } = await supabase.from('alimentos').select('*').limit(1);
-        
         if (error) throw error;
-
-        res.json({
-            sucesso: true,
-            mensagem: 'Supabase conectado',
-            dados: data
-        });
+        res.json({ sucesso: true, dados: data });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
@@ -24,7 +24,6 @@ app.get('/api/teste-banco', async (req, res) => {
 app.post('/api/popular-banco', async (req, res) => {
     try {
         const alimentosTaco = TacoService.alimentos;
-
         for (const alimento of alimentosTaco) {
             const { data: novoAlimento, error: erroAlimento } = await supabase
                 .from('alimentos')
@@ -42,18 +41,12 @@ app.post('/api/popular-banco', async (req, res) => {
             if (erroAlimento) throw erroAlimento;
 
             const precoAleatorio = (Math.random() * (25 - 5) + 5).toFixed(2);
-            
             const { error: erroPreco } = await supabase
                 .from('precos')
-                .insert([{
-                    alimento_id: novoAlimento.id,
-                    preco_medio: parseFloat(precoAleatorio),
-                    fonte_dado: 'CONAB'
-                }]);
+                .insert([{ alimento_id: novoAlimento.id, preco_medio: parseFloat(precoAleatorio), fonte_dado: 'CONAB' }]);
 
             if (erroPreco) throw erroPreco;
         }
-
         res.json({ sucesso: true, mensagem: 'Banco populado com dados da TACO e preços!' });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
@@ -62,30 +55,229 @@ app.post('/api/popular-banco', async (req, res) => {
 
 app.get('/api/alimentos', async (req, res) => {
     const { pesquisa } = req.query;
-    
-    if (!pesquisa) {
-        return res.status(400).json({ sucesso: false, erro: 'Envie um termo de pesquisa.' });
-    }
+    if (!pesquisa) return res.status(400).json({ sucesso: false, erro: 'Envie um termo de pesquisa.' });
 
     try {
         const { data, error } = await supabase
             .from('alimentos')
-            .select(`
-                id,
-                nome_descricao,
-                calorias,
-                proteinas,
-                precos (
-                    preco_medio,
-                    fonte_dado
-                )
-            `)
+            .select(`id, nome_descricao, calorias, proteinas, precos ( preco_medio, fonte_dado )`)
             .ilike('nome_descricao', `%${pesquisa}%`)
             .limit(10);
 
         if (error) throw error;
-
         res.json({ sucesso: true, total: data.length, dados: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.post('/api/auth/registrar', async (req, res) => {
+    const { nome, email, senha } = req.body;
+    if (!nome || !email || !senha) return res.status(400).json({ sucesso: false, erro: 'Preencha todos os campos.' });
+
+    try {
+        const { data: usuarioExistente } = await supabase
+            .from('usuarios')
+            .select('id')
+            .eq('email', email)
+            .single();
+
+        if (usuarioExistente) return res.status(400).json({ sucesso: false, erro: 'Este e-mail já está cadastrado.' });
+
+        const salt = await bcrypt.genSalt(10);
+        const senha_hash = await bcrypt.hash(senha, salt);
+
+        const { data, error } = await supabase
+            .from('usuarios')
+            .insert([{ nome, email, senha_hash }])
+            .select('id, nome, email')
+            .single();
+
+        if (error) throw error;
+        res.status(201).json({ sucesso: true, mensagem: 'Usuário cadastrado com sucesso!', usuario: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    const { email, senha } = req.body;
+    if (!email || !senha) return res.status(400).json({ sucesso: false, erro: 'Informe e-mail e senha.' });
+
+    try {
+        const { data: usuario, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (error || !usuario) return res.status(401).json({ sucesso: false, erro: 'E-mail ou senha inválidos.' });
+
+        const senhaValida = await bcrypt.compare(senha, usuario.senha_hash);
+        if (!senhaValida) return res.status(401).json({ sucesso: false, erro: 'E-mail ou senha inválidos.' });
+
+        const token = jwt.sign({ id: usuario.id, email: usuario.email }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            sucesso: true,
+            mensagem: 'Login realizado com sucesso!',
+            token,
+            usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email }
+        });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
+    const { valor, periodo } = req.body;
+    const usuario_id = req.usuarioId; 
+
+    if (!valor || !periodo) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe o valor e o período.' });
+    }
+
+    try {
+        const { data: orcamentoExistente } = await supabase
+            .from('orcamentos')
+            .select('id')
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        let resultado;
+
+        if (orcamentoExistente) {
+            const { data, error } = await supabase
+                .from('orcamentos')
+                .update({ valor, periodo, atualizado_em: new Date() })
+                .eq('usuario_id', usuario_id)
+                .select()
+                .single();
+            if (error) throw error;
+            resultado = data;
+        } else {
+            const { data, error } = await supabase
+                .from('orcamentos')
+                .insert([{ usuario_id, valor, periodo }])
+                .select()
+                .single();
+            if (error) throw error;
+            resultado = data;
+        }
+
+        res.json({ sucesso: true, mensagem: 'Orçamento salvo!', orcamento: resultado });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.post('/api/listas', verificarAutenticacao, async (req, res) => {
+    const { titulo_lista, tipo } = req.body;
+    const usuario_id = req.usuarioId; // ID vem do token JWT
+
+    if (!titulo_lista) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe o título da lista.' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('listas')
+            .insert([{ 
+                usuario_id, 
+                titulo_lista, 
+                tipo: tipo || 'mercado' 
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json({ sucesso: true, mensagem: 'Lista criada com sucesso!', lista: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
+    const lista_id = req.params.id; // Pega o ID da lista na URL
+    const { alimento_id, quantidade_gramas } = req.body;
+
+    if (!alimento_id || !quantidade_gramas) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe o alimento_id e a quantidade_gramas.' });
+    }
+
+    try {
+        const { data: precoData, error: precoError } = await supabase
+            .from('precos')
+            .select('preco_medio')
+            .eq('alimento_id', alimento_id)
+            .single();
+
+        if (precoError || !precoData) {
+            return res.status(404).json({ sucesso: false, erro: 'Preço do alimento não encontrado.' });
+        }
+
+        const preco_calculado = (precoData.preco_medio / 100) * quantidade_gramas;
+
+        const { data, error } = await supabase
+            .from('lista_itens')
+            .insert([{ 
+                lista_id, 
+                alimento_id, 
+                quantidade_gramas, 
+                preco_calculado: parseFloat(preco_calculado.toFixed(2)) 
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json({ sucesso: true, mensagem: 'Item adicionado à lista!', item: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.get('/api/listas/:id', verificarAutenticacao, async (req, res) => {
+    const lista_id = req.params.id;
+    const usuario_id = req.usuarioId; 
+
+    try {
+        const { data: lista, error } = await supabase
+            .from('listas')
+            .select(`
+                id, 
+                titulo_lista, 
+                tipo, 
+                criado_em,
+                lista_itens (
+                    id, 
+                    quantidade_gramas, 
+                    preco_calculado,
+                    alimentos (
+                        nome_descricao
+                    )
+                )
+            `)
+            .eq('id', lista_id)
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        if (error || !lista) {
+            return res.status(404).json({ sucesso: false, erro: 'Lista não encontrada.' });
+        }
+
+        const valorTotal = lista.lista_itens.reduce((soma, item) => soma + Number(item.preco_calculado), 0);
+
+        res.json({
+            sucesso: true,
+            resumo: {
+                id_lista: lista.id,
+                titulo: lista.titulo_lista,
+                tipo: lista.tipo,
+                total_itens: lista.lista_itens.length,
+                valor_total_calculado: parseFloat(valorTotal.toFixed(2)),
+                itens: lista.lista_itens
+            }
+        });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
@@ -93,5 +285,5 @@ app.get('/api/alimentos', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Backend rodando na porta ${PORT}`);
+    console.log(`Backend do Prato Certo rodando na porta ${PORT}`);
 });
