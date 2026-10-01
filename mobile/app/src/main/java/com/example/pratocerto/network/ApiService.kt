@@ -48,4 +48,16 @@ interface ApiService {
         @Path("id") idLista: Int,
         @Body body: AdicionarItemRequest
     ): RespostaAdicionarItem
+
+    // ── Metas ────────────────────────────────────────────────────────────────
+    @POST("api/metas")
+    suspend fun salvarMeta(
+        @Header("Authorization") token: String,
+        @Body body: MetaRequest
+    ): RespostaMeta
+
+    @GET("api/metas")
+    suspend fun buscarMeta(
+        @Header("Authorization") token: String
+    ): RespostaMeta
 }

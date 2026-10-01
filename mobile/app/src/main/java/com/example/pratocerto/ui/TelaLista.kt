@@ -8,9 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,9 +25,8 @@ import com.example.pratocerto.ui.theme.PratoCertoColors
 import com.example.pratocerto.viewmodel.CardapioViewModel
 
 @Composable
-fun TelaCardapio(
+fun TelaLista(
     onVoltar: () -> Unit,
-    onIrPesquisa: () -> Unit,
     navContent: @Composable () -> Unit = {},
     viewModel: CardapioViewModel = viewModel()
 ) {
@@ -38,30 +36,23 @@ fun TelaCardapio(
         Column(modifier = Modifier.fillMaxSize().padding(bottom = 100.dp)) {
 
             Row(
-                modifier = Modifier.fillMaxWidth().background(PratoCertoColors.Green)
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Voltar",
-                    tint = Color.White,
                     modifier = Modifier.clickable { onVoltar() }
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Meu Cardápio", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    Text("Lista de Compras", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 }
 
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Adicionar",
-                    tint = Color.White,
-                    modifier = Modifier.clickable { onIrPesquisa() }
-                )
+                Spacer(Modifier.width(24.dp))
             }
 
             when {
@@ -70,38 +61,38 @@ fun TelaCardapio(
                         CircularProgressIndicator(color = PratoCertoColors.Green)
                     }
                 }
-                viewModel.erro != null -> {
-                    Text(viewModel.erro ?: "", color = Color.Red, modifier = Modifier.padding(20.dp), fontSize = 13.sp)
-                }
                 viewModel.listasCardapio.isNotEmpty() -> {
                     val lista = viewModel.listasCardapio.first()
 
-                    // SEGURANÇA: Previne o crash se a API devolver null
+                    // SEGURANÇA contra valores nulos
                     val itensSeguros = (lista.itens as? List<ItemLista>) ?: emptyList()
                     val valorSeguro = (lista.valorTotal as? Double) ?: 0.0
-                    val totalSeguro = (lista.totalItens as? Int) ?: 0
+
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 0.dp)
+                        .clip(RoundedCornerShape(16.dp)).background(Color(0xFF222222)).padding(16.dp)
+                    ) {
+                        Column {
+                            Text("Gasto Estimado (Semanal)", fontSize = 11.sp, color = Color(0xFFAAAAAA))
+                            Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
+                            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF444444))) {
+                                Box(modifier = Modifier.fillMaxWidth(0.25f).fillMaxHeight().background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
+                            }
+                            Text("R$ 144,10 restantes do orçamento", fontSize = 10.sp, color = Color(0xFFAAAAAA), modifier = Modifier.padding(top = 6.dp).align(Alignment.End))
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    Text("Pendentes", fontSize = 14.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
 
                     LazyColumn {
                         items(itensSeguros) { item ->
-                            ItemCardapioRow(item)
+                            ItemListaRow(item)
                             HorizontalDivider(color = PratoCertoColors.Divider)
                         }
-
-                        item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(20.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(PratoCertoColors.IconBoxBg)
-                                    .padding(16.dp)
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                                    Text("Resumo Nutricional do Dia", fontSize = 12.sp, color = PratoCertoColors.TextGreen, fontWeight = FontWeight.SemiBold)
-                                    Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A1A), modifier = Modifier.padding(top = 4.dp))
-                                    Text("$totalSeguro itens na lista", fontSize = 12.sp, color = PratoCertoColors.TextGray)
-                                }
-                            }
-                        }
                     }
+                }
+                viewModel.erro != null -> {
+                    Text(viewModel.erro ?: "", color = Color.Red, modifier = Modifier.padding(20.dp))
                 }
             }
         }
@@ -110,30 +101,21 @@ fun TelaCardapio(
 }
 
 @Composable
-private fun ItemCardapioRow(item: ItemLista) {
-    val qtd = (item.quantidadeGramas as? Double) ?: 0.0
+private fun ItemListaRow(item: ItemLista) {
     val preco = (item.precoCalculado as? Double) ?: 0.0
 
     Row(
         modifier = Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(PratoCertoColors.IconBoxBg),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Restaurant,
-                contentDescription = null,
-                tint = PratoCertoColors.TextGreen,
-                modifier = Modifier.size(22.dp)
-            )
-        }
+        Icon(
+            imageVector = Icons.Default.RadioButtonUnchecked,
+            contentDescription = null,
+            tint = Color(0xFFCCCCCC),
+            modifier = Modifier.size(24.dp)
+        )
         Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(item.alimentos?.nome ?: "Alimento", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFF333333))
-            Text("${qtd.toInt()}g", fontSize = 11.sp, color = PratoCertoColors.TextGray)
-        }
+        Text(item.alimentos?.nome ?: "Item", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text("R$ ${"%.2f".format(preco)}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = PratoCertoColors.TextGreen)
     }
 }

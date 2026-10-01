@@ -5,16 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.pratocerto.model.Alimento
 import com.example.pratocerto.model.MetaData
+import com.example.pratocerto.model.MetaRequest
 import com.example.pratocerto.network.RetrofitInstance
 import com.example.pratocerto.util.SessionManager
 import kotlinx.coroutines.launch
 
-class AlimentosViewModel : ViewModel() {
-
-    var alimentos by mutableStateOf<List<Alimento>>(emptyList())
-        private set
+class MetasViewModel : ViewModel() {
 
     var meta by mutableStateOf<MetaData?>(null)
         private set
@@ -25,31 +22,38 @@ class AlimentosViewModel : ViewModel() {
     var erro by mutableStateOf<String?>(null)
         private set
 
-    var termoPesquisa by mutableStateOf("")
+    var salvoComSucesso by mutableStateOf(false)
+        private set
 
-    init {
-        carregarMeta()
-    }
-
-    private fun carregarMeta() {
-        viewModelScope.launch {
-            try {
-                val resposta = RetrofitInstance.api.buscarMeta(SessionManager.bearer())
-                if (resposta.sucesso) meta = resposta.meta
-            } catch (_: Exception) {
-                // sem meta cadastrada ainda — ignora
-            }
-        }
-    }
-
-    fun buscar(termo: String) {
-        if (termo.isBlank()) return
+    fun carregarMeta() {
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
-                val resposta = RetrofitInstance.api.buscarAlimentos(termo)
-                alimentos = resposta.dados
+                val resposta = RetrofitInstance.api.buscarMeta(SessionManager.bearer())
+                if (resposta.sucesso) meta = resposta.meta
+            } catch (e: Exception) {
+            } finally {
+                carregando = false
+            }
+        }
+    }
+
+    fun salvar(pesoAtual: Double, pesoMeta: Double, objetivo: String) {
+        viewModelScope.launch {
+            carregando = true
+            erro = null
+            try {
+                val resposta = RetrofitInstance.api.salvarMeta(
+                    token = SessionManager.bearer(),
+                    body = MetaRequest(pesoAtual, pesoMeta, objetivo)
+                )
+                if (resposta.sucesso) {
+                    meta = resposta.meta
+                    salvoComSucesso = true
+                } else {
+                    erro = resposta.erro ?: "Erro ao salvar meta."
+                }
             } catch (e: Exception) {
                 erro = "Erro de conexão: ${e.message}"
             } finally {
@@ -58,9 +62,5 @@ class AlimentosViewModel : ViewModel() {
         }
     }
 
-    fun limpar() {
-        alimentos = emptyList()
-        termoPesquisa = ""
-        erro = null
-    }
+    fun resetSucesso() { salvoComSucesso = false }
 }

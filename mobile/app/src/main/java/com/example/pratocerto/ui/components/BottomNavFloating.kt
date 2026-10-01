@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -15,80 +15,76 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.pratocerto.ui.theme.PratoCertoColors
 
+enum class NavTab { HOME, PESQUISA, CARDAPIO, LISTA, PERFIL }
+
 @Composable
-fun BottomNavFloating(
-    telaAtual: String,
-    onNavigate: (String) -> Unit
+fun NavFloating(
+    selecao: NavTab,
+    onHome: () -> Unit,
+    onPesquisa: () -> Unit,
+    onCardapio: () -> Unit,
+    onLista: () -> Unit,
+    onPerfil: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 20.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
-                .shadow(10.dp, RoundedCornerShape(30.dp))
-                .background(PratoCertoColors.PrimaryGreen, RoundedCornerShape(30.dp)),
+                .shadow(12.dp, RoundedCornerShape(30.dp))
+                .clip(RoundedCornerShape(30.dp))
+                .background(PratoCertoColors.NavBg)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { onNavigate("cardapio") }) {
-                Icon(
-                    Icons.Default.ListAlt,
-                    contentDescription = "Cardápio",
-                    tint = if (telaAtual == "cardapio") Color.White else Color.White.copy(0.6f)
-                )
+            NavBtn(Icons.AutoMirrored.Filled.MenuBook, selecao == NavTab.CARDAPIO, onCardapio)
+            NavBtn(Icons.Default.ShoppingCart, selecao == NavTab.LISTA, onLista)
+
+            Box(
+                modifier = Modifier
+                    .offset(y = (-16).dp)
+                    .size(56.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(onClick = onHome) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Home",
+                        tint = PratoCertoColors.Green,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
-            IconButton(onClick = { onNavigate("lista_compras") }) {
-                Icon(
-                    Icons.Default.ShoppingCart,
-                    contentDescription = "Lista",
-                    tint = if (telaAtual == "lista_compras") Color.White else Color.White.copy(0.6f)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(56.dp))
-
-            IconButton(onClick = { onNavigate("pesquisa") }) {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = "Pesquisar",
-                    tint = if (telaAtual == "pesquisa") Color.White else Color.White.copy(0.6f)
-                )
-            }
-
-            IconButton(onClick = { onNavigate("auth") }) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = "Perfil",
-                    tint = if (telaAtual == "auth") Color.White else Color.White.copy(0.6f)
-                )
-            }
+            NavBtn(Icons.Default.Search, selecao == NavTab.PESQUISA, onPesquisa)
+            NavBtn(Icons.Default.Person, selecao == NavTab.PERFIL, onPerfil)
         }
+    }
+}
 
-        IconButton(
-            onClick = { onNavigate("menu_principal") },
-            modifier = Modifier
-                .offset(y = (-10).dp)
-                .size(56.dp)
-                .shadow(8.dp, CircleShape)
-                .background(Color.White, CircleShape)
-        ) {
-            Icon(
-                Icons.Default.Home,
-                contentDescription = "Home",
-                tint = PratoCertoColors.TextGreen,
-                modifier = Modifier.size(28.dp)
-            )
-        }
+@Composable
+private fun NavBtn(icon: ImageVector, selecionado: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selecionado) Color.White else Color.White.copy(alpha = 0.5f),
+            modifier = Modifier.size(26.dp)
+        )
     }
 }

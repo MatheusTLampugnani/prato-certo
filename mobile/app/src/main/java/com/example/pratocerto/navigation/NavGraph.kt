@@ -1,67 +1,71 @@
 package com.example.pratocerto.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import com.example.pratocerto.ui.TelaCadastroLogin
-import com.example.pratocerto.ui.TelaCardapio
-import com.example.pratocerto.ui.TelaMenuPrincipal
-import com.example.pratocerto.ui.TelaOrcamento
-import com.example.pratocerto.ui.TelaPesquisaAlimentos
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import com.example.pratocerto.ui.*
+import com.example.pratocerto.ui.components.NavFloating
+import com.example.pratocerto.ui.components.NavTab
+
+object Rotas {
+    const val LOGIN    = "login"
+    const val HOME     = "home"
+    const val ORCAMENTO = "orcamento"
+    const val PESQUISA  = "pesquisa"
+    const val CARDAPIO  = "cardapio"
+    const val LISTA     = "lista"
+    const val METAS     = "metas"
+}
 
 @Composable
-fun NavGraph(navController: NavHostController) {
-    NavHost(
-        navController = navController,
-        startDestination = "auth"
-    ) {
-        composable("auth") {
-            TelaCadastroLogin(
-                onLoginSucesso = {
-                    navController.navigate("menu_principal") {
-                        popUpTo("auth") { inclusive = true }
-                    }
-                }
-            )
-        }
+fun NavGraph() {
+    var telaAtual by remember { mutableStateOf(Rotas.LOGIN) }
 
-        composable("menu_principal") {
-            TelaMenuPrincipal(
-                onIrCardapio = { navController.navigate("cardapio") },
-                onIrOrcamento = { navController.navigate("orcamento") },
-                onIrPesquisa = { navController.navigate("pesquisa") },
-                onLogout = {
-                    navController.navigate("auth") {
-                        popUpTo("menu_principal") { inclusive = true }
-                    }
-                },
-                onNavigate = { destino -> navController.navigate(destino) }
-            )
-        }
+    val nav: @Composable () -> Unit = {
+        NavFloating(
+            selecao = when (telaAtual) {
+                Rotas.HOME      -> NavTab.HOME
+                Rotas.PESQUISA  -> NavTab.PESQUISA
+                Rotas.CARDAPIO  -> NavTab.CARDAPIO
+                Rotas.LISTA     -> NavTab.LISTA
+                else            -> NavTab.HOME
+            },
+            onHome     = { telaAtual = Rotas.HOME },
+            onPesquisa = { telaAtual = Rotas.PESQUISA },
+            onCardapio = { telaAtual = Rotas.CARDAPIO },
+            onLista    = { telaAtual = Rotas.LISTA },
+            onPerfil   = { telaAtual = Rotas.LOGIN }
+        )
+    }
 
-        composable("cardapio") {
-            TelaCardapio(
-                onVoltar = { navController.popBackStack() }
-            )
-        }
+    when (telaAtual) {
+        Rotas.LOGIN -> TelaCadastroLogin(onLoginSucesso = { telaAtual = Rotas.HOME })
 
-        composable("orcamento") {
-            TelaOrcamento(
-                onVoltar = { navController.popBackStack() }
-            )
-        }
+        Rotas.HOME -> TelaHome(
+            onIrOrcamento = { telaAtual = Rotas.ORCAMENTO },
+            onIrCardapio  = { telaAtual = Rotas.CARDAPIO },
+            onIrLista     = { telaAtual = Rotas.LISTA },
+            onIrPesquisa  = { telaAtual = Rotas.PESQUISA },
+            navContent    = nav
+        )
 
-        composable("pesquisa") {
-            TelaPesquisaAlimentos(
-                onVoltar = { navController.popBackStack() }
-            )
-        }
+        Rotas.ORCAMENTO -> TelaOrcamento(onVoltar = { telaAtual = Rotas.HOME })
 
-        composable("lista_compras") {
-            TelaCardapio(
-                onVoltar = { navController.popBackStack() }
-            )
-        }
+        Rotas.PESQUISA -> TelaPesquisaAlimentos(
+            onVoltar   = { telaAtual = Rotas.HOME },
+            navContent = nav
+        )
+
+        Rotas.CARDAPIO -> TelaCardapio(
+            onVoltar      = { telaAtual = Rotas.HOME },
+            onIrPesquisa  = { telaAtual = Rotas.PESQUISA },
+            navContent    = nav
+        )
+
+        Rotas.LISTA -> TelaLista(
+            onVoltar   = { telaAtual = Rotas.HOME },
+            navContent = nav
+        )
+
+        Rotas.METAS -> TelaMetasUsuario(onVoltar = { telaAtual = Rotas.HOME })
     }
 }

@@ -82,10 +82,14 @@ data class OrcamentoData(
 // ── Listas ─────────────────────────────────────────────────────────────────
 
 data class ItemLista(
-    val id: Int,
-    @SerializedName("quantidade_gramas") val quantidadeGramas: Double,
-    @SerializedName("preco_calculado") val precoCalculado: Double,
-    val alimentos: AlimentoSimples? = null
+    val id: Int? = null,
+    val alimentos: AlimentoData? = null,
+    val quantidadeGramas: Double = 0.0,
+    val precoCalculado: Double = 0.0
+)
+
+data class AlimentoData(
+    val nome: String
 )
 
 data class AlimentoSimples(
@@ -124,10 +128,10 @@ data class ItemListaCardapio(
 
 data class CardapioItemData(
     val id: Int,
-    @SerializedName("titulo_lista") val tituloLista: String,
-    val tipo: String,
-    @SerializedName("criado_em") val criadoEm: String? = null,
-    @SerializedName("lista_itens") val listaItens: List<ItemListaCardapio> = emptyList()
+    val titulo_lista: String?,
+    val itens: List<ItemLista> = emptyList(),
+    val valorTotal: Double = 0.0,
+    val totalItens: Int = 0
 )
 
 data class RespostaCardapio(
@@ -156,5 +160,32 @@ data class AdicionarItemRequest(
 data class RespostaAdicionarItem(
     val sucesso: Boolean,
     val mensagem: String? = null,
+    val erro: String? = null
+)
+
+// ── Metas ──────────────────────────────────────────────────────────────────
+
+data class MetaRequest(
+    val peso_atual: Double,
+    val peso_meta: Double,
+    val objetivo: String
+)
+
+data class MetaData(
+    val id: Int,
+    val usuario_id: Int,
+    val peso_atual: Double,
+    val peso_meta: Double,
+    val objetivo: String,
+    val calorias_dia: Int,
+    val proteinas_dia: Int,
+    val carboidratos_dia: Int,
+    val gorduras_dia: Int
+)
+
+data class RespostaMeta(
+    val sucesso: Boolean,
+    val mensagem: String? = null,
+    val meta: MetaData? = null,
     val erro: String? = null
 )

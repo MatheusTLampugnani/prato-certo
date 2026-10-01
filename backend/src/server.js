@@ -2,9 +2,9 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const supabase = require('./config/db'); 
+const supabase = require('./config/db');
 const TacoService = require('./services/tacoService');
-const verificarAutenticacao = require('./middleware/auth'); 
+const verificarAutenticacao = require('./middleware/auth');
 
 const app = express();
 app.use(express.json());
@@ -153,14 +153,14 @@ app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
                 .from('orcamentos')
                 .update({ valor, periodo })
                 .eq('usuario_id', usuario_id);
-            
+
             if (erroUpdate) throw erroUpdate;
         } else {
             // 3. Se não existir, cria um novo registro
             const { error: erroInsert } = await supabase
                 .from('orcamentos')
                 .insert([{ usuario_id, valor, periodo }]);
-            
+
             if (erroInsert) throw erroInsert;
         }
 
@@ -212,10 +212,10 @@ app.post('/api/listas', verificarAutenticacao, async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('listas')
-            .insert([{ 
-                usuario_id, 
-                titulo_lista, 
-                tipo: tipo || 'mercado' 
+            .insert([{
+                usuario_id,
+                titulo_lista,
+                tipo: tipo || 'mercado'
             }])
             .select()
             .single();
@@ -250,11 +250,11 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
 
         const { data, error } = await supabase
             .from('lista_itens')
-            .insert([{ 
-                lista_id, 
-                alimento_id, 
-                quantidade_gramas, 
-                preco_calculado: parseFloat(preco_calculado.toFixed(2)) 
+            .insert([{
+                lista_id,
+                alimento_id,
+                quantidade_gramas,
+                preco_calculado: parseFloat(preco_calculado.toFixed(2))
             }])
             .select()
             .single();
@@ -268,7 +268,7 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
 
 app.get('/api/listas/:id', verificarAutenticacao, async (req, res) => {
     const lista_id = req.params.id;
-    const usuario_id = req.usuarioId; 
+    const usuario_id = req.usuarioId;
 
     try {
         const { data: lista, error } = await supabase
@@ -326,6 +326,24 @@ app.get('/api/orcamento', verificarAutenticacao, async (req, res) => {
 
         if (error) throw error;
         res.json({ sucesso: true, orcamento: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+app.get('/api/metas', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+    try {
+        const { data, error } = await supabase
+            .from('metas_usuario')
+            .select('*')
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        if (error || !data) {
+            return res.status(404).json({ sucesso: false, erro: 'Nenhuma meta encontrada.' });
+        }
+        res.json({ sucesso: true, meta: data });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
