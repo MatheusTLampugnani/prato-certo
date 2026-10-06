@@ -26,17 +26,17 @@ class CardapioViewModel : ViewModel() {
     var erro by mutableStateOf<String?>(null)
         private set
 
-    // ── Carregar Cardápios/Listas ─────────────────────────────────────────────
     fun carregarCardapio() {
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
-                val resposta = RetrofitInstance.api.buscarCardapio(
-                    token = SessionManager.bearer()
-                )
+                val resposta = RetrofitInstance.api.buscarCardapio(SessionManager.bearer())
                 if (resposta.sucesso) {
-                    listasCardapio = resposta.dados
+                    // Garante que lista_itens nunca seja null em nenhum nível
+                    listasCardapio = (resposta.dados ?: emptyList()).map { lista ->
+                        lista.copy(itens = lista.itens.orEmpty())
+                    }
                 } else {
                     erro = resposta.erro ?: "Erro ao carregar cardápio."
                 }
@@ -48,23 +48,15 @@ class CardapioViewModel : ViewModel() {
         }
     }
 
-    // ── Carregar Orçamento Salvo ──────────────────────────────────────────────
     fun carregarOrcamento() {
         viewModelScope.launch {
             try {
-                val resposta = RetrofitInstance.api.buscarOrcamento(
-                    token = SessionManager.bearer()
-                )
-                if (resposta.sucesso) {
-                    orcamentoValor = resposta.orcamento?.valor
-                }
-            } catch (_: Exception) {
-                // Silencioso se o usuário ainda não tiver cadastrado orçamento
-            }
+                val resposta = RetrofitInstance.api.buscarOrcamento(SessionManager.bearer())
+                if (resposta.sucesso) orcamentoValor = resposta.orcamento?.valor
+            } catch (_: Exception) { /* silencioso */ }
         }
     }
 
-    // ── Criar Novo Cardápio ───────────────────────────────────────────────────
     fun criarNovoCardapio(titulo: String) {
         viewModelScope.launch {
             carregando = true
@@ -73,38 +65,28 @@ class CardapioViewModel : ViewModel() {
                     token = SessionManager.bearer(),
                     body = CriarListaRequest(titulo_lista = titulo, tipo = "cardapio")
                 )
-                if (resposta.sucesso) {
-                    carregarCardapio()
-                } else {
-                    erro = resposta.erro ?: "Erro ao criar cardápio."
-                }
+                if (resposta.sucesso) carregarCardapio()
+                else erro = resposta.erro ?: "Erro ao criar cardápio."
             } catch (e: Exception) {
-                erro = "Erro ao criar: ${e.message}"
+                erro = "Erro: ${e.message}"
             } finally {
                 carregando = false
             }
         }
     }
 
-    // ── Adicionar Alimento a um Cardápio ──────────────────────────────────────
     fun adicionarAlimentoNaLista(idLista: Int, alimentoId: Int, quantidadeGramas: Double) {
         viewModelScope.launch {
             try {
                 val resposta = RetrofitInstance.api.adicionarItemLista(
                     token = SessionManager.bearer(),
                     idLista = idLista,
-                    body = AdicionarItemRequest(
-                        alimento_id = alimentoId,
-                        quantidade_gramas = quantidadeGramas
-                    )
+                    body = AdicionarItemRequest(alimento_id = alimentoId, quantidade_gramas = quantidadeGramas)
                 )
-                if (resposta.sucesso) {
-                    carregarCardapio()
-                } else {
-                    erro = resposta.erro ?: "Erro ao adicionar item."
-                }
+                if (resposta.sucesso) carregarCardapio()
+                else erro = resposta.erro ?: "Erro ao adicionar item."
             } catch (e: Exception) {
-                erro = "Erro ao adicionar: ${e.message}"
+                erro = "Erro: ${e.message}"
             }
         }
     }

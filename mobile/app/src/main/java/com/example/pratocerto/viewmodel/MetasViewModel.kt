@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.pratocerto.model.Alimento
 import com.example.pratocerto.model.MetaData
 import com.example.pratocerto.model.MetaRequest
 import com.example.pratocerto.network.RetrofitInstance
@@ -16,6 +17,9 @@ class MetasViewModel : ViewModel() {
     var meta by mutableStateOf<MetaData?>(null)
         private set
 
+    var sugestoes by mutableStateOf<List<Alimento>>(emptyList())
+        private set
+
     var carregando by mutableStateOf(false)
         private set
 
@@ -25,31 +29,38 @@ class MetasViewModel : ViewModel() {
     var salvoComSucesso by mutableStateOf(false)
         private set
 
+    init { carregarMeta() }
+
     fun carregarMeta() {
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
                 val resposta = RetrofitInstance.api.buscarMeta(SessionManager.bearer())
-                if (resposta.sucesso) meta = resposta.meta
-            } catch (e: Exception) {
+                if (resposta.sucesso) {
+                    meta = resposta.meta
+                    sugestoes = resposta.sugestoes.orEmpty()
+                }
+            } catch (_: Exception) {
+                // sem meta ainda — normal
             } finally {
                 carregando = false
             }
         }
     }
 
-    fun salvar(pesoAtual: Double, pesoMeta: Double, objetivo: String) {
+    fun salvar(pesoAtual: Double, alturaCm: Double, objetivo: String) {
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
                 val resposta = RetrofitInstance.api.salvarMeta(
                     token = SessionManager.bearer(),
-                    body = MetaRequest(pesoAtual, pesoMeta, objetivo)
+                    body = MetaRequest(pesoAtual, alturaCm, objetivo)
                 )
                 if (resposta.sucesso) {
                     meta = resposta.meta
+                    sugestoes = resposta.sugestoes.orEmpty()
                     salvoComSucesso = true
                 } else {
                     erro = resposta.erro ?: "Erro ao salvar meta."

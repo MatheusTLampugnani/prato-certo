@@ -37,7 +37,7 @@ class AlimentosViewModel : ViewModel() {
                 val resposta = RetrofitInstance.api.buscarMeta(SessionManager.bearer())
                 if (resposta.sucesso) meta = resposta.meta
             } catch (_: Exception) {
-                // sem meta cadastrada ainda — ignora
+                // sem meta ainda — ignora
             }
         }
     }
@@ -49,7 +49,7 @@ class AlimentosViewModel : ViewModel() {
             erro = null
             try {
                 val resposta = RetrofitInstance.api.buscarAlimentos(termo)
-                alimentos = resposta.dados
+                alimentos = resposta.dados.orEmpty()
             } catch (e: Exception) {
                 erro = "Erro de conexão: ${e.message}"
             } finally {

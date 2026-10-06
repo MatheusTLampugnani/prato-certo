@@ -5,20 +5,15 @@ import retrofit2.http.*
 
 interface ApiService {
 
-    // ── Alimentos ────────────────────────────────────────────────────────────
     @GET("api/alimentos")
-    suspend fun buscarAlimentos(
-        @Query("pesquisa") pesquisa: String
-    ): RespostaAlimentos
+    suspend fun buscarAlimentos(@Query("pesquisa") pesquisa: String): RespostaAlimentos
 
-    // ── Auth ─────────────────────────────────────────────────────────────────
     @POST("api/auth/registrar")
     suspend fun registrar(@Body body: UsuarioRegistro): RespostaRegistro
 
     @POST("api/auth/login")
     suspend fun login(@Body body: UsuarioLogin): RespostaLogin
 
-    // ── Orçamento ────────────────────────────────────────────────────────────
     @POST("api/orcamento")
     suspend fun salvarOrcamento(
         @Header("Authorization") token: String,
@@ -26,15 +21,10 @@ interface ApiService {
     ): RespostaOrcamento
 
     @GET("api/orcamento")
-    suspend fun buscarOrcamento(
-        @Header("Authorization") token: String
-    ): RespostaOrcamento
+    suspend fun buscarOrcamento(@Header("Authorization") token: String): RespostaOrcamento
 
-    // ── Cardápio / Listas ─────────────────────────────────────────────────────
     @GET("api/cardapio")
-    suspend fun buscarCardapio(
-        @Header("Authorization") token: String
-    ): RespostaCardapio
+    suspend fun buscarCardapio(@Header("Authorization") token: String): RespostaCardapio
 
     @POST("api/listas")
     suspend fun criarLista(
@@ -49,7 +39,6 @@ interface ApiService {
         @Body body: AdicionarItemRequest
     ): RespostaAdicionarItem
 
-    // ── Metas ────────────────────────────────────────────────────────────────
     @POST("api/metas")
     suspend fun salvarMeta(
         @Header("Authorization") token: String,
@@ -57,7 +46,5 @@ interface ApiService {
     ): RespostaMeta
 
     @GET("api/metas")
-    suspend fun buscarMeta(
-        @Header("Authorization") token: String
-    ): RespostaMeta
+    suspend fun buscarMeta(@Header("Authorization") token: String): RespostaMeta
 }

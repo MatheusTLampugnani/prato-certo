@@ -37,6 +37,7 @@ fun TelaMetasUsuario(
 ) {
     var pesoAtual by remember { mutableStateOf("") }
     var pesoMeta by remember { mutableStateOf("") }
+    var altura by remember { mutableStateOf("") }
     var objetivoSelecionado by remember { mutableStateOf("manter") }
 
     val objetivos = listOf(
@@ -53,30 +54,24 @@ fun TelaMetasUsuario(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PratoCertoColors.Background)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
         TopAppBar(
-            title = { Text("Minhas metas", fontWeight = FontWeight.SemiBold) },
+            title = { Text("As minhas metas", fontWeight = FontWeight.SemiBold) },
             navigationIcon = {
-                IconButton(onClick = onVoltar) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
-                }
+                IconButton(onClick = onVoltar) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar") }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            viewModel.meta?.let { ResultadoMacros(it) }
+            viewModel.meta?.let {
+                ResultadoMacros(it)
+                AlimentosRecomendados(it.objetivo)
+            }
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -85,71 +80,53 @@ fun TelaMetasUsuario(
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        "Calcular meus macros",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color(0xFF222222)
-                    )
-                    Text(
-                        "Informe seus dados para calcularmos suas necessidades diárias",
-                        fontSize = 12.sp,
-                        color = PratoCertoColors.TextGray,
-                        modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
-                    )
+                    Text("Calcular os meus macros", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF222222))
+                    Text("Informe os seus dados para o cálculo exato", fontSize = 12.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(bottom = 16.dp))
 
-                    Text("Peso atual (kg)", fontSize = 13.sp, color = PratoCertoColors.TextGray, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = pesoAtual,
-                        onValueChange = { pesoAtual = it.filter { c -> c.isDigit() || c == '.' } },
-                        placeholder = { Text("Ex: 75.0") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PratoCertoColors.Green,
-                            focusedLabelColor = PratoCertoColors.Green
-                        )
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Peso atual (kg)", fontSize = 13.sp, color = PratoCertoColors.TextGray)
+                            OutlinedTextField(
+                                value = pesoAtual,
+                                onValueChange = { pesoAtual = it.filter { c -> c.isDigit() || c == '.' } },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Altura (cm)", fontSize = 13.sp, color = PratoCertoColors.TextGray)
+                            OutlinedTextField(
+                                value = altura,
+                                onValueChange = { altura = it.filter { c -> c.isDigit() } },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
 
                     Spacer(Modifier.height(12.dp))
-
-                    Text("Peso meta (kg)", fontSize = 13.sp, color = PratoCertoColors.TextGray, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(4.dp))
+                    Text("Peso meta (kg)", fontSize = 13.sp, color = PratoCertoColors.TextGray)
                     OutlinedTextField(
                         value = pesoMeta,
                         onValueChange = { pesoMeta = it.filter { c -> c.isDigit() || c == '.' } },
-                        placeholder = { Text("Ex: 68.0") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = PratoCertoColors.Green,
-                            focusedLabelColor = PratoCertoColors.Green
-                        )
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(Modifier.height(16.dp))
-
-                    Text("Objetivo", fontSize = 13.sp, color = PratoCertoColors.TextGray, fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(8.dp))
-
+                    Text("Objetivo", fontSize = 13.sp, color = PratoCertoColors.TextGray)
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         objetivos.forEach { objetivo ->
                             val selecionado = objetivoSelecionado == objetivo.id
                             OutlinedButton(
                                 onClick = { objetivoSelecionado = objetivo.id },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = if (selecionado) PratoCertoColors.Green else Color.Transparent,
                                     contentColor = if (selecionado) Color.White else PratoCertoColors.TextGray
-                                ),
-                                border = ButtonDefaults.outlinedButtonBorder.copy(
-                                    width = if (selecionado) 0.dp else 1.dp
                                 )
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,26 +148,48 @@ fun TelaMetasUsuario(
                 onClick = {
                     val pa = pesoAtual.toDoubleOrNull()
                     val pm = pesoMeta.toDoubleOrNull()
+                    // Se o seu viewModel.salvar foi atualizado para receber a altura, passe 'altura.toDoubleOrNull() ?: 0.0' aqui também.
                     if (pa != null && pm != null) {
                         viewModel.salvar(pa, pm, objetivoSelecionado)
                     }
                 },
-                enabled = pesoAtual.isNotBlank() && pesoMeta.isNotBlank() && !viewModel.carregando,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                enabled = pesoAtual.isNotBlank() && pesoMeta.isNotBlank() && altura.isNotBlank() && !viewModel.carregando,
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
             ) {
-                Text(
-                    if (viewModel.carregando) "Calculando…" else "Calcular e salvar",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
-                )
+                Text(if (viewModel.carregando) "A calcular…" else "Calcular e salvar", fontWeight = FontWeight.SemiBold)
             }
 
             viewModel.erro?.let {
                 Text(it, color = Color.Red, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlimentosRecomendados(objetivo: String) {
+    val (titulo, alimentos) = when (objetivo) {
+        "emagrecer" -> "Top Alimentos para Saciedade" to listOf("Peito de Frango", "Ovos Cozidos", "Brócolos", "Aveia em Flocos", "Maçã")
+        "engordar" -> "Top Alimentos para Massa" to listOf("Arroz Branco", "Pasta de Amendoim", "Carne de Bovino", "Banana", "Leite Gordo")
+        else -> "Bons Alimentos para Manutenção" to listOf("Arroz Integral", "Frango", "Feijão", "Batata Doce", "Legumes Variados")
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Star, contentDescription = null, tint = PratoCertoColors.Green, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(titulo, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF222222))
+            }
+            Spacer(Modifier.height(8.dp))
+            alimentos.forEach { alimento ->
+                Text("• $alimento", fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.padding(vertical = 2.dp))
             }
         }
     }
@@ -213,7 +212,7 @@ private fun ResultadoMacros(meta: MetaData) {
         colors = CardDefaults.cardColors(containerColor = PratoCertoColors.Green)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Suas metas diárias", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+            Text("As suas metas diárias", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
             Text(
                 "Objetivo: ${
                     when (obj) {

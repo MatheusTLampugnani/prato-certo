@@ -76,10 +76,9 @@ fun TelaCardapio(
                 viewModel.listasCardapio.isNotEmpty() -> {
                     val lista = viewModel.listasCardapio.first()
 
-                    // SEGURANÇA: Previne o crash se a API devolver null
-                    val itensSeguros = (lista.itens as? List<ItemLista>) ?: emptyList()
-                    val valorSeguro = (lista.valorTotal as? Double) ?: 0.0
-                    val totalSeguro = (lista.totalItens as? Int) ?: 0
+                    val itensSeguros = lista.itens ?: emptyList()
+                    val valorSeguro = lista.valorTotal
+                    val totalSeguro = lista.totalItens
 
                     LazyColumn {
                         items(itensSeguros) { item ->

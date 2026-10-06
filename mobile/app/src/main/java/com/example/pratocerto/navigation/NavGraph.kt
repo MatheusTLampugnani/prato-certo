@@ -62,8 +62,9 @@ fun NavGraph() {
         )
 
         Rotas.LISTA -> TelaLista(
-            onVoltar   = { telaAtual = Rotas.HOME },
-            navContent = nav
+            onVoltar     = { telaAtual = Rotas.HOME },
+            onIrPesquisa = { telaAtual = Rotas.PESQUISA },
+            navContent   = nav
         )
 
         Rotas.METAS -> TelaMetasUsuario(onVoltar = { telaAtual = Rotas.HOME })

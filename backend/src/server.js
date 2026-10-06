@@ -349,6 +349,205 @@ app.get('/api/metas', verificarAutenticacao, async (req, res) => {
     }
 });
 
+// ── POST /api/metas  (salvar/atualizar meta com cálculo completo) ───
+app.post('/api/metas', verificarAutenticacao, async (req, res) => {
+    const { peso_atual, altura_cm, objetivo } = req.body;
+    const usuario_id = req.usuarioId;
+
+    if (!peso_atual || !altura_cm || !objetivo) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: 'Informe peso_atual, altura_cm e objetivo.'
+        });
+    }
+
+    const idade = 25;
+    const tmb = 88.36 + (13.4 * peso_atual) + (4.8 * altura_cm) - (5.7 * idade);
+    const fatorAtividade = 1.375; // levemente ativo
+
+    let calorias, proteinas, carboidratos, gorduras, peso_meta;
+
+    if (objetivo === 'emagrecer') {
+        calorias    = Math.round(tmb * fatorAtividade * 0.80); // déficit 20%
+        proteinas   = Math.round(peso_atual * 2.2);
+        gorduras    = Math.round(peso_atual * 0.8);
+        carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
+        peso_meta   = parseFloat((peso_atual * 0.90).toFixed(1));
+    } else if (objetivo === 'engordar') {
+        calorias    = Math.round(tmb * fatorAtividade * 1.15); // superávit 15%
+        proteinas   = Math.round(peso_atual * 2.0);
+        gorduras    = Math.round(peso_atual * 1.0);
+        carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
+        peso_meta   = parseFloat((peso_atual * 1.05).toFixed(1));
+    } else { // manter
+        calorias    = Math.round(tmb * fatorAtividade);
+        proteinas   = Math.round(peso_atual * 1.8);
+        gorduras    = Math.round(peso_atual * 0.9);
+        carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
+        peso_meta   = peso_atual;
+    }
+
+    if (carboidratos < 0) carboidratos = 30;
+
+    try {
+        const { data: existente } = await supabase
+            .from('metas_usuario')
+            .select('id')
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        const payload = {
+            usuario_id,
+            peso_atual: parseFloat(peso_atual),
+            altura_cm: parseFloat(altura_cm),
+            peso_meta,
+            objetivo,
+            calorias_dia: calorias,
+            proteinas_dia: proteinas,
+            carboidratos_dia: carboidratos,
+            gorduras_dia: gorduras
+        };
+
+        let resultado;
+        if (existente) {
+            const { data, error } = await supabase
+                .from('metas_usuario')
+                .update(payload)
+                .eq('usuario_id', usuario_id)
+                .select().single();
+            if (error) throw error;
+            resultado = data;
+        } else {
+            const { data, error } = await supabase
+                .from('metas_usuario')
+                .insert([payload])
+                .select().single();
+            if (error) throw error;
+            resultado = data;
+        }
+
+        const { data: sugestoes, error: erroSug } = await supabase
+            .from('alimentos')
+            .select('id, nome_descricao, calorias, proteinas, carboidratos, gorduras, precos(preco_medio)')
+            .gt('proteinas', 5)
+            .lte('calorias', objetivo === 'emagrecer' ? 200 : 400)
+            .limit(6);
+
+        res.json({
+            sucesso: true,
+            mensagem: 'Meta salva!',
+            meta: resultado,
+            sugestoes: erroSug ? [] : (sugestoes || [])
+        });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── GET /api/metas ──────────────────────────────────────────────────
+app.get('/api/metas', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+    try {
+        const { data, error } = await supabase
+            .from('metas_usuario')
+            .select('*')
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        if (error || !data) {
+            return res.status(404).json({ sucesso: false, erro: 'Nenhuma meta encontrada.' });
+        }
+
+        // Busca sugestões junto com a meta
+        const { data: sugestoes } = await supabase
+            .from('alimentos')
+            .select('id, nome_descricao, calorias, proteinas, carboidratos, gorduras, precos(preco_medio)')
+            .gt('proteinas', 5)
+            .lte('calorias', data.objetivo === 'emagrecer' ? 200 : 400)
+            .limit(6);
+
+        res.json({
+            sucesso: true,
+            meta: data,
+            sugestoes: sugestoes || []
+        });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── GET /api/orcamento ──────────────────────────────────────────────
+app.get('/api/orcamento', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+    try {
+        const { data, error } = await supabase
+            .from('orcamentos')
+            .select('*')
+            .eq('usuario_id', usuario_id)
+            .single();
+
+        if (error || !data) {
+            return res.status(404).json({ sucesso: false, erro: 'Nenhum orçamento encontrado.' });
+        }
+        res.json({ sucesso: true, orcamento: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── GET /api/cardapio ───────────────────────────────────────────────
+app.get('/api/cardapio', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+    try {
+        const { data, error } = await supabase
+            .from('listas')
+            .select(`
+                id,
+                titulo_lista,
+                tipo,
+                criado_em,
+                lista_itens (
+                    id,
+                    quantidade_gramas,
+                    preco_calculado,
+                    alimentos (
+                        id,
+                        nome_descricao,
+                        calorias,
+                        proteinas,
+                        carboidratos,
+                        gorduras
+                    )
+                )
+            `)
+            .eq('usuario_id', usuario_id)
+            .order('criado_em', { ascending: false });
+
+        if (error) throw error;
+
+        const dados = (data || []).map(lista => ({
+            id: lista.id,
+            titulo_lista: lista.titulo_lista,
+            tipo: lista.tipo,
+            lista_itens: (lista.lista_itens || []).map(item => ({
+                id: item.id,
+                quantidade_gramas: item.quantidade_gramas,
+                preco_calculado: item.preco_calculado,
+                alimentos: item.alimentos
+            })),
+            totalItens: (lista.lista_itens || []).length,
+            valorTotal: (lista.lista_itens || []).reduce(
+                (soma, item) => soma + Number(item.preco_calculado || 0), 0
+            )
+        }));
+
+        res.json({ sucesso: true, dados });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Backend do Prato Certo rodando na porta ${PORT}`);

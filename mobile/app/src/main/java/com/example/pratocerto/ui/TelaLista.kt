@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ import com.example.pratocerto.viewmodel.CardapioViewModel
 @Composable
 fun TelaLista(
     onVoltar: () -> Unit,
+    onIrPesquisa: () -> Unit,
     navContent: @Composable () -> Unit = {},
     viewModel: CardapioViewModel = viewModel()
 ) {
@@ -35,6 +37,7 @@ fun TelaLista(
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
         Column(modifier = Modifier.fillMaxSize().padding(bottom = 100.dp)) {
 
+            // Cabeçalho Superior
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -52,7 +55,7 @@ fun TelaLista(
                     Text("Lista de Compras", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 }
 
-                Spacer(Modifier.width(24.dp))
+                Spacer(Modifier.width(24.dp)) // Espaço para equilibrar o layout
             }
 
             when {
@@ -61,41 +64,68 @@ fun TelaLista(
                         CircularProgressIndicator(color = PratoCertoColors.Green)
                     }
                 }
-                viewModel.listasCardapio.isNotEmpty() -> {
-                    val lista = viewModel.listasCardapio.first()
-
-                    // SEGURANÇA contra valores nulos
-                    val itensSeguros = (lista.itens as? List<ItemLista>) ?: emptyList()
-                    val valorSeguro = (lista.valorTotal as? Double) ?: 0.0
-
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 0.dp)
-                        .clip(RoundedCornerShape(16.dp)).background(Color(0xFF222222)).padding(16.dp)
-                    ) {
-                        Column {
-                            Text("Gasto Estimado (Semanal)", fontSize = 11.sp, color = Color(0xFFAAAAAA))
-                            Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
-                            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF444444))) {
-                                Box(modifier = Modifier.fillMaxWidth(0.25f).fillMaxHeight().background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
-                            }
-                            Text("R$ 144,10 restantes do orçamento", fontSize = 10.sp, color = Color(0xFFAAAAAA), modifier = Modifier.padding(top = 6.dp).align(Alignment.End))
-                        }
-                    }
-
-                    Spacer(Modifier.height(16.dp))
-                    Text("Pendentes", fontSize = 14.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-
-                    LazyColumn {
-                        items(itensSeguros) { item ->
-                            ItemListaRow(item)
-                            HorizontalDivider(color = PratoCertoColors.Divider)
-                        }
-                    }
-                }
                 viewModel.erro != null -> {
                     Text(viewModel.erro ?: "", color = Color.Red, modifier = Modifier.padding(20.dp))
                 }
+                else -> {
+                    val lista = viewModel.listasCardapio.firstOrNull()
+                    val itensSeguros = lista?.itens ?: emptyList()
+                    val valorSeguro = lista?.valorTotal ?: 0.0
+
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF222222))
+                        .padding(16.dp)
+                    ) {
+                        Column {
+                            Text("Gasto Estimado Total", fontSize = 11.sp, color = Color(0xFFAAAAAA))
+                            Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
+                            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF444444))) {
+                                Box(modifier = Modifier.fillMaxWidth(if (valorSeguro > 0) 0.25f else 0f).fillMaxHeight().background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
+                            }
+                            Text("R$ 1000.00 restantes de R$ 1000.00", fontSize = 10.sp, color = Color(0xFFAAAAAA), modifier = Modifier.padding(top = 6.dp).align(Alignment.End))
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Lógica para alternar entre "Lista Vazia" ou "Itens Pendentes"
+                    if (itensSeguros.isEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Nenhuma lista criada ainda.", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                            Spacer(Modifier.height(24.dp))
+
+                            Button(
+                                onClick = onIrPesquisa,
+                                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.height(45.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Criar Nova Lista", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    } else {
+                        Text("Pendentes", fontSize = 14.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+
+                        LazyColumn {
+                            items(itensSeguros) { item ->
+                                ItemListaRow(item)
+                                HorizontalDivider(color = PratoCertoColors.Divider)
+                            }
+                        }
+                    }
+                }
             }
         }
+
+        // Navegação Inferior
         Box(modifier = Modifier.align(Alignment.BottomCenter)) { navContent() }
     }
 }
