@@ -153,32 +153,97 @@ fun TelaCardapio(
                     }
                 }
                 else -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                    val meta = metasViewModel.meta
+                    val sugestoes = metasViewModel.sugestoes
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Nenhum cardápio criado.", color = PratoCertoColors.TextGray, fontSize = 14.sp)
-                        Spacer(Modifier.height(24.dp))
-                        if (metasViewModel.sugestoes.isNotEmpty()) {
-                            Button(
-                                onClick = { viewModel.gerarListaSugestao(onSucesso = onIrLista) },
-                                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.height(45.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Criar Lista Sugestão", fontWeight = FontWeight.SemiBold)
+                        item {
+                            Text("Nenhum cardápio criado.", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                            Spacer(Modifier.height(24.dp))
+                        }
+
+                        if (meta != null) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(PratoCertoColors.IconBoxBg)
+                                        .padding(16.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Sua Meta Diária", fontSize = 14.sp, color = PratoCertoColors.TextGreen, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("Calorias: ${meta.calorias_dia} kcal", fontSize = 13.sp, color = Color.DarkGray, fontWeight = FontWeight.SemiBold)
+                                        Text("Proteínas: ${meta.proteinas_dia}g", fontSize = 13.sp, color = Color.DarkGray, fontWeight = FontWeight.SemiBold)
+                                        
+                                        Spacer(Modifier.height(12.dp))
+                                        Button(
+                                            onClick = onIrMetas,
+                                            colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text("Mudar Meta", fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(24.dp))
+                            }
+
+                            if (sugestoes.isNotEmpty()) {
+                                item {
+                                    Text("Alimentos Sugeridos", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A))
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                                
+                                items(sugestoes) { alimento ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color.White).padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Restaurant,
+                                            contentDescription = null,
+                                            tint = PratoCertoColors.TextGreen,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(alimento.nome, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color(0xFF333333))
+                                            Text("${alimento.calorias} kcal | ${alimento.proteinas}g prot", fontSize = 12.sp, color = PratoCertoColors.TextGray)
+                                        }
+                                    }
+                                    Spacer(Modifier.height(8.dp))
+                                }
+
+                                item {
+                                    Spacer(Modifier.height(16.dp))
+                                    Button(
+                                        onClick = { viewModel.gerarListaSugestao(onSucesso = onIrLista) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().height(45.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Criar Lista Sugestão", fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                             }
                         } else {
-                            Text("Configure suas metas para ver sugestões.", color = PratoCertoColors.TextGray, fontSize = 12.sp)
-                            Spacer(Modifier.height(16.dp))
-                            Button(
-                                onClick = onIrMetas,
-                                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Configurar Metas", fontWeight = FontWeight.SemiBold)
+                            item {
+                                Text("Configure suas metas para ver sugestões.", color = PratoCertoColors.TextGray, fontSize = 12.sp)
+                                Spacer(Modifier.height(16.dp))
+                                Button(
+                                    onClick = onIrMetas,
+                                    colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Configurar Metas", fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                     }
