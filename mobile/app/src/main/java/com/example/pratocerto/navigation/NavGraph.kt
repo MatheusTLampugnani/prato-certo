@@ -19,6 +19,7 @@ object Rotas {
 @Composable
 fun NavGraph() {
     var telaAtual by remember { mutableStateOf(Rotas.LOGIN) }
+    var telaAnterior by remember { mutableStateOf(Rotas.HOME) }
 
     val nav: @Composable () -> Unit = {
         NavFloating(
@@ -58,6 +59,11 @@ fun NavGraph() {
         Rotas.CARDAPIO -> TelaCardapio(
             onVoltar      = { telaAtual = Rotas.HOME },
             onIrPesquisa  = { telaAtual = Rotas.PESQUISA },
+            onIrMetas     = { 
+                telaAnterior = telaAtual
+                telaAtual = Rotas.METAS 
+            },
+            onIrLista     = { telaAtual = Rotas.LISTA },
             navContent    = nav
         )
 
@@ -67,6 +73,6 @@ fun NavGraph() {
             navContent   = nav
         )
 
-        Rotas.METAS -> TelaMetasUsuario(onVoltar = { telaAtual = Rotas.HOME })
+        Rotas.METAS -> TelaMetasUsuario(onVoltar = { telaAtual = telaAnterior })
     }
 }

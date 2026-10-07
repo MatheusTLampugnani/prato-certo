@@ -24,15 +24,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pratocerto.model.ItemLista
 import com.example.pratocerto.ui.theme.PratoCertoColors
 import com.example.pratocerto.viewmodel.CardapioViewModel
+import com.example.pratocerto.viewmodel.MetasViewModel
 
 @Composable
 fun TelaCardapio(
     onVoltar: () -> Unit,
     onIrPesquisa: () -> Unit,
+    onIrMetas: () -> Unit = {},
+    onIrLista: () -> Unit = {},
     navContent: @Composable () -> Unit = {},
-    viewModel: CardapioViewModel = viewModel()
+    viewModel: CardapioViewModel = viewModel(),
+    metasViewModel: MetasViewModel = viewModel()
 ) {
-    LaunchedEffect(Unit) { viewModel.carregarCardapio() }
+    LaunchedEffect(Unit) {
+        viewModel.carregarCardapio()
+        metasViewModel.carregarMeta()
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
         Column(modifier = Modifier.fillMaxSize().padding(bottom = 100.dp)) {
@@ -73,17 +80,41 @@ fun TelaCardapio(
                 viewModel.erro != null -> {
                     Text(viewModel.erro ?: "", color = Color.Red, modifier = Modifier.padding(20.dp), fontSize = 13.sp)
                 }
-                viewModel.listasCardapio.isNotEmpty() -> {
-                    val lista = viewModel.listasCardapio.first()
+                viewModel.listasCardapio.any { it.tipo == "cardapio" } -> {
+                    val lista = viewModel.listasCardapio.first { it.tipo == "cardapio" }
 
                     val itensSeguros = lista.itens ?: emptyList()
                     val valorSeguro = lista.valorTotal
                     val totalSeguro = lista.totalItens
+                    
+                    val caloriasAtuais = itensSeguros.sumOf { (it.alimentos?.calorias ?: 0.0) * (it.quantidadeGramas / 100.0) }
+                    val proteinaAtual = itensSeguros.sumOf { (it.alimentos?.proteinas ?: 0.0) * (it.quantidadeGramas / 100.0) }
 
                     LazyColumn {
-                        items(itensSeguros) { item ->
-                            ItemCardapioRow(item)
-                            HorizontalDivider(color = PratoCertoColors.Divider)
+                        if (itensSeguros.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("Seu cardápio está vazio.", color = PratoCertoColors.TextGray)
+                                    Spacer(Modifier.height(16.dp))
+                                    if (metasViewModel.sugestoes.isNotEmpty()) {
+                                        Button(
+                                            onClick = { viewModel.gerarListaSugestao(onSucesso = onIrLista) },
+                                            colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text("Criar lista Sugestão")
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            items(itensSeguros) { item ->
+                                ItemCardapioRow(item)
+                                HorizontalDivider(color = PratoCertoColors.Divider)
+                            }
                         }
 
                         item {
@@ -91,13 +122,63 @@ fun TelaCardapio(
                                 modifier = Modifier.fillMaxWidth().padding(20.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(PratoCertoColors.IconBoxBg)
+                                    .clickable { onIrMetas() }
                                     .padding(16.dp)
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                                     Text("Resumo Nutricional do Dia", fontSize = 12.sp, color = PratoCertoColors.TextGreen, fontWeight = FontWeight.SemiBold)
                                     Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A1A), modifier = Modifier.padding(top = 4.dp))
                                     Text("$totalSeguro itens na lista", fontSize = 12.sp, color = PratoCertoColors.TextGray)
+                                    
+                                    if (metasViewModel.meta != null) {
+                                        Spacer(Modifier.height(12.dp))
+                                        val calMeta = metasViewModel.meta!!.calorias_dia
+                                        val protMeta = metasViewModel.meta!!.proteinas_dia
+                                        Text("Calorias: ${caloriasAtuais.toInt()} / $calMeta kcal", fontSize = 13.sp, color = Color.DarkGray, fontWeight = FontWeight.SemiBold)
+                                        Text("Proteínas: ${proteinaAtual.toInt()}g / ${protMeta}g", fontSize = 13.sp, color = Color.DarkGray, fontWeight = FontWeight.SemiBold)
+                                    }
+
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(
+                                        onClick = onIrMetas,
+                                        colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Editar metas", fontWeight = FontWeight.SemiBold)
+                                    }
                                 }
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Nenhum cardápio criado.", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                        Spacer(Modifier.height(24.dp))
+                        if (metasViewModel.sugestoes.isNotEmpty()) {
+                            Button(
+                                onClick = { viewModel.gerarListaSugestao(onSucesso = onIrLista) },
+                                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.height(45.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Criar Lista Sugestão", fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            Text("Configure suas metas para ver sugestões.", color = PratoCertoColors.TextGray, fontSize = 12.sp)
+                            Spacer(Modifier.height(16.dp))
+                            Button(
+                                onClick = onIrMetas,
+                                colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Configurar Metas", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }

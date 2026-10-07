@@ -32,6 +32,9 @@ fun TelaLista(
     navContent: @Composable () -> Unit = {},
     viewModel: CardapioViewModel = viewModel()
 ) {
+    var mostrarDialog by remember { mutableStateOf(false) }
+    var tituloNovaLista by remember { mutableStateOf("") }
+
     LaunchedEffect(Unit) { viewModel.carregarCardapio() }
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
@@ -55,7 +58,11 @@ fun TelaLista(
                     Text("Lista de Compras", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 }
 
-                Spacer(Modifier.width(24.dp)) // Espaço para equilibrar o layout
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Nova Lista",
+                    modifier = Modifier.clickable { mostrarDialog = true }
+                )
             }
 
             when {
@@ -68,31 +75,9 @@ fun TelaLista(
                     Text(viewModel.erro ?: "", color = Color.Red, modifier = Modifier.padding(20.dp))
                 }
                 else -> {
-                    val lista = viewModel.listasCardapio.firstOrNull()
-                    val itensSeguros = lista?.itens ?: emptyList()
-                    val valorSeguro = lista?.valorTotal ?: 0.0
-
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF222222))
-                        .padding(16.dp)
-                    ) {
-                        Column {
-                            Text("Gasto Estimado Total", fontSize = 11.sp, color = Color(0xFFAAAAAA))
-                            Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
-                            Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF444444))) {
-                                Box(modifier = Modifier.fillMaxWidth(if (valorSeguro > 0) 0.25f else 0f).fillMaxHeight().background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
-                            }
-                            Text("R$ 1000.00 restantes de R$ 1000.00", fontSize = 10.sp, color = Color(0xFFAAAAAA), modifier = Modifier.padding(top = 6.dp).align(Alignment.End))
-                        }
-                    }
-
-                    Spacer(Modifier.height(24.dp))
-
-                    // Lógica para alternar entre "Lista Vazia" ou "Itens Pendentes"
-                    if (itensSeguros.isEmpty()) {
+                    val listasMercado = viewModel.listasCardapio.filter { it.tipo == "mercado" }
+                    
+                    if (listasMercado.isEmpty()) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(top = 40.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -101,7 +86,7 @@ fun TelaLista(
                             Spacer(Modifier.height(24.dp))
 
                             Button(
-                                onClick = onIrPesquisa,
+                                onClick = { mostrarDialog = true },
                                 colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.height(45.dp)
@@ -112,12 +97,66 @@ fun TelaLista(
                             }
                         }
                     } else {
-                        Text("Pendentes", fontSize = 14.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(listasMercado) { lista ->
+                                val itensSeguros = lista.itens ?: emptyList()
+                                val valorSeguro = lista.valorTotal
 
-                        LazyColumn {
-                            items(itensSeguros) { item ->
-                                ItemListaRow(item)
-                                HorizontalDivider(color = PratoCertoColors.Divider)
+                                Text(
+                                    lista.titulo_lista ?: "Lista de Compras", 
+                                    fontSize = 18.sp, 
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                                )
+
+                                Box(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0xFF222222))
+                                    .padding(16.dp)
+                                ) {
+                                    Column {
+                                        Text("Gasto Estimado Total", fontSize = 11.sp, color = Color(0xFFAAAAAA))
+                                        Text("R$ ${"%.2f".format(valorSeguro)}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(bottom = 8.dp))
+                                        Box(modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF444444))) {
+                                            Box(modifier = Modifier.fillMaxWidth(if (valorSeguro > 0) 0.25f else 0f).fillMaxHeight().background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
+                                        }
+                                        Text("${itensSeguros.size} itens na lista", fontSize = 10.sp, color = Color(0xFFAAAAAA), modifier = Modifier.padding(top = 6.dp).align(Alignment.End))
+                                    }
+                                }
+
+                                if (itensSeguros.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("Sua lista está vazia.", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                                        Spacer(Modifier.height(16.dp))
+
+                                        Button(
+                                            onClick = onIrPesquisa,
+                                            colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green),
+                                            shape = RoundedCornerShape(12.dp),
+                                            modifier = Modifier.height(45.dp)
+                                        ) {
+                                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Adicionar Itens", fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                } else {
+                                    Text("Pendentes", fontSize = 14.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                                    
+                                    Column {
+                                        itensSeguros.forEach { item ->
+                                            ItemListaRow(item)
+                                            HorizontalDivider(color = PratoCertoColors.Divider)
+                                        }
+                                    }
+                                    
+                                    Spacer(Modifier.height(32.dp))
+                                }
                             }
                         }
                     }
@@ -127,6 +166,39 @@ fun TelaLista(
 
         // Navegação Inferior
         Box(modifier = Modifier.align(Alignment.BottomCenter)) { navContent() }
+
+        if (mostrarDialog) {
+            AlertDialog(
+                onDismissRequest = { mostrarDialog = false },
+                title = { Text("Nova Lista de Compras", fontWeight = FontWeight.Bold) },
+                text = {
+                    OutlinedTextField(
+                        value = tituloNovaLista,
+                        onValueChange = { tituloNovaLista = it },
+                        label = { Text("Título da lista") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (tituloNovaLista.isNotBlank()) {
+                                viewModel.criarNovaListaMercado(tituloNovaLista)
+                                mostrarDialog = false
+                                tituloNovaLista = ""
+                            }
+                        }
+                    ) {
+                        Text("Criar", color = PratoCertoColors.TextGreen, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarDialog = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                }
+            )
+        }
     }
 }
 

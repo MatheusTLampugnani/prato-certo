@@ -39,6 +39,7 @@ fun TelaMetasUsuario(
     var pesoMeta by remember { mutableStateOf("") }
     var altura by remember { mutableStateOf("") }
     var objetivoSelecionado by remember { mutableStateOf("manter") }
+    var isEditing by remember { mutableStateOf(false) }
 
     val objetivos = listOf(
         OpcaoObjetivo("emagrecer", Icons.AutoMirrored.Filled.TrendingDown, "Emagrecer"),
@@ -70,11 +71,12 @@ fun TelaMetasUsuario(
 
             viewModel.meta?.let {
                 ResultadoMacros(it)
-                AlimentosRecomendados(it.objetivo)
+                AlimentosRecomendados(it.objetivo, viewModel.sugestoes)
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
+            if (viewModel.meta == null || isEditing) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(2.dp)
@@ -148,17 +150,34 @@ fun TelaMetasUsuario(
                 onClick = {
                     val pa = pesoAtual.toDoubleOrNull()
                     val pm = pesoMeta.toDoubleOrNull()
-                    // Se o seu viewModel.salvar foi atualizado para receber a altura, passe 'altura.toDoubleOrNull() ?: 0.0' aqui também.
-                    if (pa != null && pm != null) {
-                        viewModel.salvar(pa, pm, objetivoSelecionado)
+                    val alt = altura.toDoubleOrNull() ?: 0.0
+                    if (pa != null && alt > 0) {
+                        viewModel.salvar(pa, alt, objetivoSelecionado, pm)
+                        isEditing = false
                     }
                 },
-                enabled = pesoAtual.isNotBlank() && pesoMeta.isNotBlank() && altura.isNotBlank() && !viewModel.carregando,
+                enabled = pesoAtual.isNotBlank() && altura.isNotBlank() && !viewModel.carregando,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
             ) {
                 Text(if (viewModel.carregando) "A calcular…" else "Calcular e salvar", fontWeight = FontWeight.SemiBold)
+            }
+            } else {
+                Button(
+                    onClick = {
+                        pesoAtual = viewModel.meta!!.peso_atual.toString()
+                        pesoMeta = viewModel.meta!!.peso_meta.toString()
+                        altura = viewModel.meta!!.altura_cm?.toString() ?: ""
+                        objetivoSelecionado = viewModel.meta!!.objetivo
+                        isEditing = true
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
+                ) {
+                    Text("Editar minhas metas", fontWeight = FontWeight.SemiBold)
+                }
             }
 
             viewModel.erro?.let {
@@ -169,11 +188,11 @@ fun TelaMetasUsuario(
 }
 
 @Composable
-private fun AlimentosRecomendados(objetivo: String) {
-    val (titulo, alimentos) = when (objetivo) {
-        "emagrecer" -> "Top Alimentos para Saciedade" to listOf("Peito de Frango", "Ovos Cozidos", "Brócolos", "Aveia em Flocos", "Maçã")
-        "engordar" -> "Top Alimentos para Massa" to listOf("Arroz Branco", "Pasta de Amendoim", "Carne de Bovino", "Banana", "Leite Gordo")
-        else -> "Bons Alimentos para Manutenção" to listOf("Arroz Integral", "Frango", "Feijão", "Batata Doce", "Legumes Variados")
+private fun AlimentosRecomendados(objetivo: String, sugestoes: List<com.example.pratocerto.model.Alimento>) {
+    val titulo = when (objetivo) {
+        "emagrecer" -> "Top Alimentos para Saciedade"
+        "engordar" -> "Top Alimentos para Massa"
+        else -> "Bons Alimentos para Manutenção"
     }
 
     Card(
@@ -188,8 +207,14 @@ private fun AlimentosRecomendados(objetivo: String) {
                 Text(titulo, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color(0xFF222222))
             }
             Spacer(Modifier.height(8.dp))
-            alimentos.forEach { alimento ->
-                Text("• $alimento", fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.padding(vertical = 2.dp))
+            if (sugestoes.isEmpty()) {
+                Text("Nenhuma sugestão encontrada.", fontSize = 13.sp, color = Color.Gray)
+            } else {
+                sugestoes.forEach { alimento ->
+                    val caloriasStr = "%.0f".format(alimento.calorias)
+                    val protStr = "%.0f".format(alimento.proteinas)
+                    Text("• ${alimento.nome} ($caloriasStr kcal / ${protStr}g prot)", fontSize = 13.sp, color = Color.DarkGray, modifier = Modifier.padding(vertical = 2.dp))
+                }
             }
         }
     }
@@ -197,7 +222,6 @@ private fun AlimentosRecomendados(objetivo: String) {
 
 @Composable
 private fun ResultadoMacros(meta: MetaData) {
-    // SEGURANÇA: Extração segura dos macros para evitar crashes por valores nulos
     val cal = (meta.calorias_dia as? Int) ?: 0
     val prot = (meta.proteinas_dia as? Int) ?: 0
     val carb = (meta.carboidratos_dia as? Int) ?: 0

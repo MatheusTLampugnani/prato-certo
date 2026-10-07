@@ -9,7 +9,7 @@ const verificarAutenticacao = require('./middleware/auth');
 const app = express();
 app.use(express.json());
 
-const JWT_SECRET = process.env.JWT_SECRET || '472FuXFoFWtjkSZFwAerJ3ZR9O3PKnwpG/3sOh2kMwT/2yVUa3rlHJboLX4QCpOJVveVxOKki+HhMFfwoGMVHA==';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // ── Teste Banco ──────────────────────────────────────────────────────────
 app.get('/api/teste-banco', async (req, res) => {
@@ -147,24 +147,29 @@ app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
             .eq('usuario_id', usuario_id)
             .maybeSingle();
 
+        let orcamentoFinal;
         if (existente) {
             // 2. Se já existir, atualiza o valor
-            const { error: erroUpdate } = await supabase
+            const { data, error: erroUpdate } = await supabase
                 .from('orcamentos')
                 .update({ valor, periodo })
-                .eq('usuario_id', usuario_id);
+                .eq('usuario_id', usuario_id)
+                .select().single();
 
             if (erroUpdate) throw erroUpdate;
+            orcamentoFinal = data;
         } else {
             // 3. Se não existir, cria um novo registro
-            const { error: erroInsert } = await supabase
+            const { data, error: erroInsert } = await supabase
                 .from('orcamentos')
-                .insert([{ usuario_id, valor, periodo }]);
+                .insert([{ usuario_id, valor, periodo }])
+                .select().single();
 
             if (erroInsert) throw erroInsert;
+            orcamentoFinal = data;
         }
 
-        res.json({ sucesso: true, mensagem: "Orçamento salvo com sucesso!" });
+        res.json({ sucesso: true, mensagem: "Orçamento salvo com sucesso!", orcamento: orcamentoFinal });
     } catch (error) {
         console.error("Erro ao salvar orçamento:", error);
         res.status(500).json({ sucesso: false, erro: error.message });
@@ -194,7 +199,17 @@ app.get('/api/cardapio', verificarAutenticacao, async (req, res) => {
 
         if (error) throw error;
 
-        res.json({ sucesso: true, dados: listas || [] });
+        const formatado = (listas || []).map(lista => {
+            const itens = lista.lista_itens || [];
+            const valorTotal = itens.reduce((acc, it) => acc + (it.preco_calculado || 0), 0);
+            return {
+                ...lista,
+                valorTotal,
+                totalItens: itens.length
+            };
+        });
+
+        res.json({ sucesso: true, dados: formatado });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
@@ -242,11 +257,8 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
             .eq('alimento_id', alimento_id)
             .maybeSingle();
 
-        if (precoError || !precoData) {
-            return res.status(404).json({ sucesso: false, erro: 'Preço do alimento não encontrado.' });
-        }
-
-        const preco_calculado = (precoData.preco_medio / 100) * quantidade_gramas;
+        let precoMedio = (precoData && !precoError) ? precoData.preco_medio : 0;
+        const preco_calculado = (precoMedio / 100) * quantidade_gramas;
 
         const { data, error } = await supabase
             .from('lista_itens')
@@ -261,6 +273,82 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
 
         if (error) throw error;
         res.status(201).json({ sucesso: true, mensagem: 'Item adicionado à lista!', item: data });
+    } catch (error) {
+        res.status(500).json({ sucesso: false, erro: error.message });
+    }
+});
+
+// ── Gerador Automático de Cardápio ───────────────────────────────────────
+app.post('/api/cardapio/gerar', verificarAutenticacao, async (req, res) => {
+    const usuario_id = req.usuarioId;
+
+    try {
+        const { data: meta } = await supabase.from('metas_usuario').select('*').eq('usuario_id', usuario_id).single();
+        if (!meta) return res.status(404).json({ sucesso: false, erro: 'Meta não configurada.' });
+
+        const { data: orcamento } = await supabase.from('orcamentos').select('*').eq('usuario_id', usuario_id).maybeSingle();
+        if (!orcamento) return res.status(404).json({ sucesso: false, erro: 'Orçamento não configurado.' });
+
+        let dailyBudget = orcamento.valor;
+        if (orcamento.periodo === 'semanal') dailyBudget /= 7;
+        else if (orcamento.periodo === 'mensal') dailyBudget /= 30;
+
+        const { data: alimentos } = await supabase
+            .from('alimentos')
+            .select('id, nome_descricao, calorias, proteinas, carboidratos, gorduras, precos(preco_medio)')
+            .not('precos', 'is', null);
+
+        const availableFoods = (alimentos || []).filter(a => a.precos && a.precos.length > 0 && a.precos[0].preco_medio > 0);
+
+        if (availableFoods.length === 0) {
+            return res.status(404).json({ sucesso: false, erro: 'Nenhum alimento com preço encontrado no banco.' });
+        }
+
+        const costEffectiveFoods = availableFoods.sort((a, b) => {
+            const valA = a.calorias / a.precos[0].preco_medio;
+            const valB = b.calorias / b.precos[0].preco_medio;
+            return valB - valA;
+        });
+
+        let selectedItems = [];
+        let totalCost = 0;
+        let totalCal = 0;
+
+        for (const food of costEffectiveFoods) {
+            const pricePer100g = food.precos[0].preco_medio;
+            
+            if (totalCost + pricePer100g <= dailyBudget && totalCal + food.calorias <= meta.calorias_dia + 100) {
+                selectedItems.push({
+                    alimento_id: food.id,
+                    quantidade_gramas: 100,
+                    preco_calculado: parseFloat(pricePer100g.toFixed(2))
+                });
+                totalCost += pricePer100g;
+                totalCal += food.calorias;
+            }
+            
+            if (totalCal >= meta.calorias_dia - 100 || totalCost >= dailyBudget) {
+                break;
+            }
+        }
+
+        if (selectedItems.length === 0) {
+            return res.status(400).json({ sucesso: false, erro: 'Orçamento muito baixo para gerar cardápio.' });
+        }
+
+        const { data: novaLista, error: errLista } = await supabase
+            .from('listas')
+            .insert([{ usuario_id, titulo_lista: 'Sugestao', tipo: 'mercado' }])
+            .select()
+            .single();
+
+        if (errLista) throw errLista;
+
+        const itensToInsert = selectedItems.map(item => ({ lista_id: novaLista.id, ...item }));
+        const { error: errItens } = await supabase.from('lista_itens').insert(itensToInsert);
+        if (errItens) throw errItens;
+
+        res.status(201).json({ sucesso: true, mensagem: 'Cardápio gerado com sucesso!', lista: novaLista });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
@@ -331,6 +419,35 @@ app.get('/api/orcamento', verificarAutenticacao, async (req, res) => {
     }
 });
 
+async function buscarSugestoesComOrcamento(usuario_id, objetivo) {
+    const { data: orcamento } = await supabase.from('orcamentos').select('*').eq('usuario_id', usuario_id).maybeSingle();
+    
+    let dailyBudget = 0;
+    if (orcamento) {
+        dailyBudget = orcamento.valor;
+        if (orcamento.periodo === 'semanal') dailyBudget /= 7;
+        else if (orcamento.periodo === 'mensal') dailyBudget /= 30;
+    }
+
+    const { data: alimentos } = await supabase
+        .from('alimentos')
+        .select('id, nome_descricao, calorias, proteinas, carboidratos, gorduras, precos!inner(preco_medio)')
+        .gt('proteinas', 5)
+        .lte('calorias', objetivo === 'emagrecer' ? 200 : 400);
+
+    let availableFoods = alimentos || [];
+
+    if (dailyBudget > 0) {
+        availableFoods.sort((a, b) => {
+            const valA = a.calorias / a.precos[0].preco_medio;
+            const valB = b.calorias / b.precos[0].preco_medio;
+            return valB - valA;
+        });
+    }
+
+    return availableFoods.slice(0, 6);
+}
+
 app.get('/api/metas', verificarAutenticacao, async (req, res) => {
     const usuario_id = req.usuarioId;
     try {
@@ -343,15 +460,18 @@ app.get('/api/metas', verificarAutenticacao, async (req, res) => {
         if (error || !data) {
             return res.status(404).json({ sucesso: false, erro: 'Nenhuma meta encontrada.' });
         }
-        res.json({ sucesso: true, meta: data });
+
+        const sugestoes = await buscarSugestoesComOrcamento(usuario_id, data.objetivo);
+
+        res.json({ sucesso: true, meta: data, sugestoes });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
 });
 
-// ── POST /api/metas  (salvar/atualizar meta com cálculo completo) ───
+// ── POST /api/metas ───
 app.post('/api/metas', verificarAutenticacao, async (req, res) => {
-    const { peso_atual, altura_cm, objetivo } = req.body;
+    const { peso_atual, altura_cm, objetivo, peso_meta: reqPesoMeta } = req.body;
     const usuario_id = req.usuarioId;
 
     if (!peso_atual || !altura_cm || !objetivo) {
@@ -368,23 +488,23 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
     let calorias, proteinas, carboidratos, gorduras, peso_meta;
 
     if (objetivo === 'emagrecer') {
-        calorias    = Math.round(tmb * fatorAtividade * 0.80); // déficit 20%
-        proteinas   = Math.round(peso_atual * 2.2);
-        gorduras    = Math.round(peso_atual * 0.8);
+        calorias = Math.round(tmb * fatorAtividade * 0.80); // déficit 20%
+        proteinas = Math.round(peso_atual * 2.2);
+        gorduras = Math.round(peso_atual * 0.8);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta   = parseFloat((peso_atual * 0.90).toFixed(1));
+        peso_meta = reqPesoMeta ? reqPesoMeta : parseFloat((peso_atual * 0.90).toFixed(1));
     } else if (objetivo === 'engordar') {
-        calorias    = Math.round(tmb * fatorAtividade * 1.15); // superávit 15%
-        proteinas   = Math.round(peso_atual * 2.0);
-        gorduras    = Math.round(peso_atual * 1.0);
+        calorias = Math.round(tmb * fatorAtividade * 1.15); // superávit 15%
+        proteinas = Math.round(peso_atual * 2.0);
+        gorduras = Math.round(peso_atual * 1.0);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta   = parseFloat((peso_atual * 1.05).toFixed(1));
+        peso_meta = reqPesoMeta ? reqPesoMeta : parseFloat((peso_atual * 1.05).toFixed(1));
     } else { // manter
-        calorias    = Math.round(tmb * fatorAtividade);
-        proteinas   = Math.round(peso_atual * 1.8);
-        gorduras    = Math.round(peso_atual * 0.9);
+        calorias = Math.round(tmb * fatorAtividade);
+        proteinas = Math.round(peso_atual * 1.8);
+        gorduras = Math.round(peso_atual * 0.9);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta   = peso_atual;
+        peso_meta = reqPesoMeta ? reqPesoMeta : peso_atual;
     }
 
     if (carboidratos < 0) carboidratos = 30;
@@ -426,18 +546,13 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
             resultado = data;
         }
 
-        const { data: sugestoes, error: erroSug } = await supabase
-            .from('alimentos')
-            .select('id, nome_descricao, calorias, proteinas, carboidratos, gorduras, precos(preco_medio)')
-            .gt('proteinas', 5)
-            .lte('calorias', objetivo === 'emagrecer' ? 200 : 400)
-            .limit(6);
+        const sugestoes = await buscarSugestoesComOrcamento(usuario_id, objetivo);
 
         res.json({
             sucesso: true,
             mensagem: 'Meta salva!',
             meta: resultado,
-            sugestoes: erroSug ? [] : (sugestoes || [])
+            sugestoes: sugestoes || []
         });
     } catch (error) {
         res.status(500).json({ sucesso: false, erro: error.message });

@@ -49,14 +49,14 @@ class MetasViewModel : ViewModel() {
         }
     }
 
-    fun salvar(pesoAtual: Double, alturaCm: Double, objetivo: String) {
+    fun salvar(pesoAtual: Double, alturaCm: Double, objetivo: String, pesoMeta: Double?) {
         viewModelScope.launch {
             carregando = true
             erro = null
             try {
                 val resposta = RetrofitInstance.api.salvarMeta(
                     token = SessionManager.bearer(),
-                    body = MetaRequest(pesoAtual, alturaCm, objetivo)
+                    body = MetaRequest(pesoAtual, alturaCm, objetivo, pesoMeta)
                 )
                 if (resposta.sucesso) {
                     meta = resposta.meta

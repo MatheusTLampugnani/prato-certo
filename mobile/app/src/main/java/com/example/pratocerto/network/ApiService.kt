@@ -26,6 +26,9 @@ interface ApiService {
     @GET("api/cardapio")
     suspend fun buscarCardapio(@Header("Authorization") token: String): RespostaCardapio
 
+    @POST("api/cardapio/gerar")
+    suspend fun gerarCardapioInteligente(@Header("Authorization") token: String): RespostaCriarLista
+
     @POST("api/listas")
     suspend fun criarLista(
         @Header("Authorization") token: String,

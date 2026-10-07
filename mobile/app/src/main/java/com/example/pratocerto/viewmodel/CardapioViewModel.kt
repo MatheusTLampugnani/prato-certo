@@ -75,6 +75,43 @@ class CardapioViewModel : ViewModel() {
         }
     }
 
+    fun criarNovaListaMercado(titulo: String) {
+        viewModelScope.launch {
+            carregando = true
+            try {
+                val resposta = RetrofitInstance.api.criarLista(
+                    token = SessionManager.bearer(),
+                    body = CriarListaRequest(titulo_lista = titulo, tipo = "mercado")
+                )
+                if (resposta.sucesso) carregarCardapio()
+                else erro = resposta.erro ?: "Erro ao criar lista."
+            } catch (e: Exception) {
+                erro = "Erro: ${e.message}"
+            } finally {
+                carregando = false
+            }
+        }
+    }
+
+    fun gerarListaSugestao(onSucesso: () -> Unit = {}) {
+        viewModelScope.launch {
+            carregando = true
+            try {
+                val resposta = RetrofitInstance.api.gerarCardapioInteligente(SessionManager.bearer())
+                if (resposta.sucesso) {
+                    carregarCardapio()
+                    onSucesso()
+                } else {
+                    erro = resposta.erro ?: "Erro ao gerar cardápio inteligente."
+                }
+            } catch (e: Exception) {
+                erro = "Erro: ${e.message}"
+            } finally {
+                carregando = false
+            }
+        }
+    }
+
     fun adicionarAlimentoNaLista(idLista: Int, alimentoId: Int, quantidadeGramas: Double) {
         viewModelScope.launch {
             try {

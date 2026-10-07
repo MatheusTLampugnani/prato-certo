@@ -124,7 +124,8 @@ data class RespostaAdicionarItem(
 data class MetaRequest(
     val peso_atual: Double,
     val altura_cm: Double,
-    val objetivo: String
+    val objetivo: String,
+    val peso_meta: Double? = null
 )
 
 data class MetaData(

@@ -25,14 +25,55 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pratocerto.ui.theme.PratoCertoColors
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pratocerto.viewmodel.CardapioViewModel
+import com.example.pratocerto.viewmodel.MetasViewModel
+import com.example.pratocerto.viewmodel.OrcamentoViewModel
+import androidx.compose.runtime.LaunchedEffect
+
 @Composable
 fun TelaHome(
     onIrOrcamento: () -> Unit,
     onIrCardapio: () -> Unit,
     onIrLista: () -> Unit,
     onIrPesquisa: () -> Unit,
-    navContent: @Composable () -> Unit
+    navContent: @Composable () -> Unit,
+    orcamentoViewModel: OrcamentoViewModel = viewModel(),
+    metasViewModel: MetasViewModel = viewModel(),
+    cardapioViewModel: CardapioViewModel = viewModel()
 ) {
+    LaunchedEffect(Unit) {
+        orcamentoViewModel.carregarOrcamento()
+        metasViewModel.carregarMeta()
+        cardapioViewModel.carregarCardapio()
+    }
+
+    val orcamentoValor = orcamentoViewModel.orcamento?.valor ?: 0.0
+    val listasMercado = cardapioViewModel.listasCardapio.filter { it.tipo == "mercado" }
+    val gastoEstimado = listasMercado.sumOf { it.valorTotal }
+    val disponivel = orcamentoValor - gastoEstimado
+    
+    val badgeOrcamento = if (orcamentoValor == 0.0) null else if (disponivel >= 0) "OK" else "ESTOUROU"
+    val subtituloOrcamento = if (orcamentoValor > 0) "Disponível: R$ ${"%.2f".format(disponivel)} de R$ ${"%.2f".format(orcamentoValor)}" else "Nenhum orçamento definido"
+    val percentOrcamento = if (orcamentoValor > 0) (gastoEstimado / orcamentoValor).toFloat().coerceIn(0f, 1f) else 0f
+
+    val metaCalorias = metasViewModel.meta?.calorias_dia ?: 0
+    val metaProteinas = metasViewModel.meta?.proteinas_dia ?: 0
+    
+    val listasCardapio = cardapioViewModel.listasCardapio.filter { it.tipo == "cardapio" }
+    val itensCardapio = listasCardapio.flatMap { it.itens ?: emptyList() }
+    val caloriasAtuais = itensCardapio.sumOf { (it.alimentos?.calorias ?: 0.0) * (it.quantidadeGramas / 100.0) }
+    val proteinasAtuais = itensCardapio.sumOf { (it.alimentos?.proteinas ?: 0.0) * (it.quantidadeGramas / 100.0) }
+
+    val badgeMacros = if (metaCalorias == 0) null else if (caloriasAtuais <= metaCalorias) "OK" else "ESTOUROU"
+    val subtituloMacros = if (metaCalorias > 0) "${caloriasAtuais.toInt()} de $metaCalorias kcal  •  Proteínas: ${proteinasAtuais.toInt()}g / ${metaProteinas}g" else "Nenhuma meta definida"
+    val percentMacros = if (metaCalorias > 0) (caloriasAtuais / metaCalorias).toFloat().coerceIn(0f, 1f) else 0f
+
+    val totalItensMercado = listasMercado.sumOf { it.totalItens }
+    val badgeLista = if (totalItensMercado > 0) "Pendente" else null
+    val subtituloLista = if (totalItensMercado == 1) "1 item na lista de compras" else "$totalItensMercado itens pendentes para o mercado"
+    val extraLista = if (gastoEstimado > 0) "Gasto est.: R$ ${"%.2f".format(gastoEstimado)}" else null
+
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 100.dp)) {
             // Header
@@ -50,9 +91,9 @@ fun TelaHome(
             InfoCard(
                 icone = Icons.Default.AccountBalanceWallet,
                 titulo = "Orçamento Semanal",
-                subtitulo = "Disponível: R$ 190,00 de R$ 400",
-                badge = "OK",
-                barraPercent = 0.52f,
+                subtitulo = subtituloOrcamento,
+                badge = badgeOrcamento,
+                barraPercent = percentOrcamento,
                 onClick = onIrOrcamento
             )
 
@@ -60,9 +101,9 @@ fun TelaHome(
             InfoCard(
                 icone = Icons.Default.Restaurant,
                 titulo = "Macros (Hoje)",
-                subtitulo = "1.840 de 2.200 kcal  •  Proteínas: 98g / 150g",
-                badge = "OK",
-                barraPercent = 0.84f,
+                subtitulo = subtituloMacros,
+                badge = badgeMacros,
+                barraPercent = percentMacros,
                 onClick = onIrCardapio
             )
 
@@ -70,9 +111,9 @@ fun TelaHome(
             InfoCard(
                 icone = Icons.Default.ShoppingCart,
                 titulo = "Lista de Compras",
-                subtitulo = "6 itens pendentes para o mercado",
-                badge = null,
-                extra = "Gasto est.: R$ 45,90",
+                subtitulo = subtituloLista,
+                badge = badgeLista,
+                extra = extraLista,
                 onClick = onIrLista
             )
 
