@@ -1,78 +1,133 @@
 package com.example.pratocerto.navigation
 
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.pratocerto.ui.*
 import com.example.pratocerto.ui.components.NavFloating
 import com.example.pratocerto.ui.components.NavTab
+import com.example.pratocerto.util.SessionManager
 
 object Rotas {
-    const val LOGIN    = "login"
-    const val HOME     = "home"
+    const val LOGIN     = "login"
+    const val HOME      = "home"
     const val ORCAMENTO = "orcamento"
     const val PESQUISA  = "pesquisa"
     const val CARDAPIO  = "cardapio"
     const val LISTA     = "lista"
     const val METAS     = "metas"
+    const val PERFIL    = "perfil"
 }
 
 @Composable
 fun NavGraph() {
-    var telaAtual by remember { mutableStateOf(Rotas.LOGIN) }
-    var telaAnterior by remember { mutableStateOf(Rotas.HOME) }
+    val navController = rememberNavController()
+    val rotaInicial = if (SessionManager.logado()) Rotas.HOME else Rotas.LOGIN
 
-    val nav: @Composable () -> Unit = {
+    fun navFloating(tab: NavTab): @Composable () -> Unit = {
         NavFloating(
-            selecao = when (telaAtual) {
-                Rotas.HOME      -> NavTab.HOME
-                Rotas.PESQUISA  -> NavTab.PESQUISA
-                Rotas.CARDAPIO  -> NavTab.CARDAPIO
-                Rotas.LISTA     -> NavTab.LISTA
-                else            -> NavTab.HOME
+            selecao = tab,
+            onHome     = {
+                navController.navigate(Rotas.HOME) {
+                    popUpTo(Rotas.HOME) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             },
-            onHome     = { telaAtual = Rotas.HOME },
-            onPesquisa = { telaAtual = Rotas.PESQUISA },
-            onCardapio = { telaAtual = Rotas.CARDAPIO },
-            onLista    = { telaAtual = Rotas.LISTA },
-            onPerfil   = { telaAtual = Rotas.LOGIN }
+            onPesquisa = {
+                navController.navigate(Rotas.PESQUISA) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onCardapio = {
+                navController.navigate(Rotas.CARDAPIO) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onLista    = {
+                navController.navigate(Rotas.LISTA) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            onPerfil   = {
+                navController.navigate(Rotas.PERFIL) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
         )
     }
 
-    when (telaAtual) {
-        Rotas.LOGIN -> TelaCadastroLogin(onLoginSucesso = { telaAtual = Rotas.HOME })
+    NavHost(navController = navController, startDestination = rotaInicial) {
+        composable(Rotas.LOGIN) {
+            TelaCadastroLogin(onLoginSucesso = {
+                navController.navigate(Rotas.HOME) {
+                    popUpTo(Rotas.LOGIN) { inclusive = true }
+                }
+            })
+        }
 
-        Rotas.HOME -> TelaHome(
-            onIrOrcamento = { telaAtual = Rotas.ORCAMENTO },
-            onIrCardapio  = { telaAtual = Rotas.CARDAPIO },
-            onIrLista     = { telaAtual = Rotas.LISTA },
-            onIrPesquisa  = { telaAtual = Rotas.PESQUISA },
-            navContent    = nav
-        )
+        composable(Rotas.HOME) {
+            TelaHome(
+                onIrOrcamento = { navController.navigate(Rotas.ORCAMENTO) },
+                onIrCardapio  = { navController.navigate(Rotas.CARDAPIO) },
+                onIrLista     = { navController.navigate(Rotas.LISTA) },
+                onIrPesquisa  = { navController.navigate(Rotas.PESQUISA) },
+                onIrPerfil    = { navController.navigate(Rotas.PERFIL) },
+                navContent    = navFloating(NavTab.HOME)
+            )
+        }
 
-        Rotas.ORCAMENTO -> TelaOrcamento(onVoltar = { telaAtual = Rotas.HOME })
+        composable(Rotas.ORCAMENTO) {
+            TelaOrcamento(onVoltar = { navController.popBackStack() })
+        }
 
-        Rotas.PESQUISA -> TelaPesquisaAlimentos(
-            onVoltar   = { telaAtual = Rotas.HOME },
-            navContent = nav
-        )
+        composable(Rotas.PESQUISA) {
+            TelaPesquisaAlimentos(
+                onVoltar   = { navController.popBackStack() },
+                navContent = navFloating(NavTab.PESQUISA)
+            )
+        }
 
-        Rotas.CARDAPIO -> TelaCardapio(
-            onVoltar      = { telaAtual = Rotas.HOME },
-            onIrPesquisa  = { telaAtual = Rotas.PESQUISA },
-            onIrMetas     = { 
-                telaAnterior = telaAtual
-                telaAtual = Rotas.METAS 
-            },
-            onIrLista     = { telaAtual = Rotas.LISTA },
-            navContent    = nav
-        )
+        composable(Rotas.CARDAPIO) {
+            TelaCardapio(
+                onVoltar      = { navController.popBackStack() },
+                onIrPesquisa  = { navController.navigate(Rotas.PESQUISA) },
+                onIrMetas     = { navController.navigate(Rotas.METAS) },
+                onIrLista     = { navController.navigate(Rotas.LISTA) },
+                navContent    = navFloating(NavTab.CARDAPIO)
+            )
+        }
 
-        Rotas.LISTA -> TelaLista(
-            onVoltar     = { telaAtual = Rotas.HOME },
-            onIrPesquisa = { telaAtual = Rotas.PESQUISA },
-            navContent   = nav
-        )
+        composable(Rotas.LISTA) {
+            TelaLista(
+                onVoltar     = { navController.popBackStack() },
+                onIrPesquisa = { navController.navigate(Rotas.PESQUISA) },
+                navContent   = navFloating(NavTab.LISTA)
+            )
+        }
 
-        Rotas.METAS -> TelaMetasUsuario(onVoltar = { telaAtual = telaAnterior })
+        composable(Rotas.METAS) {
+            TelaMetasUsuario(onVoltar = { navController.popBackStack() })
+        }
+
+        composable(Rotas.PERFIL) {
+            TelaMenuPrincipal(
+                onIrOrcamento = { navController.navigate(Rotas.ORCAMENTO) },
+                onIrPesquisa  = { navController.navigate(Rotas.PESQUISA) },
+                onIrCardapio  = { navController.navigate(Rotas.CARDAPIO) },
+                onIrMetas     = { navController.navigate(Rotas.METAS) },
+                onLogout      = {
+                    SessionManager.limpar()
+                    navController.navigate(Rotas.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }

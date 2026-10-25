@@ -125,7 +125,8 @@ fun TelaMetasUsuario(
                             val selecionado = objetivoSelecionado == objetivo.id
                             OutlinedButton(
                                 onClick = { objetivoSelecionado = objetivo.id },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = if (selecionado) PratoCertoColors.Green else Color.Transparent,
                                     contentColor = if (selecionado) Color.White else PratoCertoColors.TextGray
@@ -161,7 +162,19 @@ fun TelaMetasUsuario(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
             ) {
-                Text(if (viewModel.carregando) "A calcular…" else "Calcular e salvar", fontWeight = FontWeight.SemiBold)
+                Text(if (viewModel.carregando) "A calcular…" else "Calcular e salvar", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+
+            if (isEditing && viewModel.meta != null) {
+                OutlinedButton(
+                    onClick = { isEditing = false },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4B5563))
+                ) {
+                    Text("Cancelar edição", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
             }
             } else {
                 Button(
@@ -176,7 +189,7 @@ fun TelaMetasUsuario(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PratoCertoColors.Green)
                 ) {
-                    Text("Editar minhas metas", fontWeight = FontWeight.SemiBold)
+                    Text("Editar minhas metas", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
 

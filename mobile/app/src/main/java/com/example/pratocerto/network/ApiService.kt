@@ -29,6 +29,9 @@ interface ApiService {
     @POST("api/cardapio/gerar")
     suspend fun gerarCardapioInteligente(@Header("Authorization") token: String): RespostaCriarLista
 
+    @POST("api/cardapio/salvar-sugestao")
+    suspend fun salvarSugestaoComoLista(@Header("Authorization") token: String): RespostaPadrao
+
     @POST("api/listas")
     suspend fun criarLista(
         @Header("Authorization") token: String,
@@ -41,6 +44,28 @@ interface ApiService {
         @Path("id") idLista: Int,
         @Body body: AdicionarItemRequest
     ): RespostaAdicionarItem
+
+    @DELETE("api/listas/{id}")
+    suspend fun excluirLista(
+        @Header("Authorization") token: String,
+        @Path("id") idLista: Int
+    ): RespostaPadrao
+
+    @DELETE("api/listas/itens/{id}")
+    suspend fun excluirItemLista(
+        @Header("Authorization") token: String,
+        @Path("id") idItem: Int
+    ): RespostaPadrao
+
+    @GET("api/produtos/barcode/{codigo}")
+    suspend fun buscarPorCodigoBarras(@Path("codigo") codigo: String): RespostaBarcode
+
+    @PATCH("api/listas/itens/{id}/toggle")
+    suspend fun alternarItemComprado(
+        @Header("Authorization") token: String,
+        @Path("id") idItem: Int,
+        @Body body: ToggleItemRequest
+    ): RespostaPadrao
 
     @POST("api/metas")
     suspend fun salvarMeta(

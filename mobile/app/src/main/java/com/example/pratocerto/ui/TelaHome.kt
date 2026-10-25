@@ -37,6 +37,7 @@ fun TelaHome(
     onIrCardapio: () -> Unit,
     onIrLista: () -> Unit,
     onIrPesquisa: () -> Unit,
+    onIrPerfil: () -> Unit = {},
     navContent: @Composable () -> Unit,
     orcamentoViewModel: OrcamentoViewModel = viewModel(),
     metasViewModel: MetasViewModel = viewModel(),
@@ -78,19 +79,45 @@ fun TelaHome(
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 100.dp)) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Menu, contentDescription = null, tint = Color(0xFF333333), modifier = Modifier.size(24.dp))
-                Text("Resumo Diário", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Box(modifier = Modifier.size(36.dp).clip(RoundedCornerShape(50)).background(Color(0xFFCCCCCC)))
+                IconButton(onClick = onIrPerfil, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Default.Menu, contentDescription = "Menu / Perfil", tint = Color(0xFF222222), modifier = Modifier.size(24.dp))
+                }
+                Text("Resumo Diário", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(PratoCertoColors.Green)
+                        .clickable { onIrPerfil() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = com.example.pratocerto.util.SessionManager.nomeUsuario.take(1).uppercase().ifEmpty { "U" },
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+
+            val periodoNome = when (orcamentoViewModel.orcamento?.periodo?.lowercase()) {
+                "mensal" -> "Mensal"
+                "quinzenal" -> "Quinzenal"
+                "semanal" -> "Semanal"
+                "diario" -> "Diário"
+                else -> "Definido"
             }
 
             // Card Orçamento
             InfoCard(
                 icone = Icons.Default.AccountBalanceWallet,
-                titulo = "Orçamento Semanal",
+                titulo = "Orçamento $periodoNome",
                 subtitulo = subtituloOrcamento,
                 badge = badgeOrcamento,
                 barraPercent = percentOrcamento,
@@ -119,29 +146,31 @@ fun TelaHome(
 
             // Botões rápidos
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick = onIrPesquisa,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = PratoCertoColors.TextGreen)
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Buscar TACO", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text("Buscar Alimentos", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
                 Button(
-                    onClick = {},
+                    onClick = onIrCardapio,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222222))
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Escanear", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text("Ver Cardápio", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
         }
@@ -161,49 +190,68 @@ fun InfoCard(
     barraPercent: Float = 0f,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            Box(
-                modifier = Modifier.size(60.dp).clip(RoundedCornerShape(12.dp)).background(PratoCertoColors.IconBoxBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icone, contentDescription = null, tint = PratoCertoColors.TextGreen, modifier = Modifier.size(28.dp))
-            }
-            if (badge != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(contentAlignment = Alignment.TopEnd) {
                 Box(
-                    modifier = Modifier.offset(x = 6.dp, y = (-6).dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(PratoCertoColors.IconBoxBg),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(badge, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE53935))
+                    Icon(icone, contentDescription = null, tint = PratoCertoColors.TextGreen, modifier = Modifier.size(26.dp))
+                }
+                if (badge != null) {
+                    val corBadge = if (badge == "OK") PratoCertoColors.TextGreen else Color(0xFFE53935)
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 6.dp, y = (-6).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(badge, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = corBadge)
+                    }
                 }
             }
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(titulo, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(subtitulo, fontSize = 11.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(top = 2.dp))
-            if (barraPercent > 0f) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(6.dp).padding(top = 4.dp)
-                        .clip(RoundedCornerShape(4.dp)).background(Color(0xFFEEEEEE))
-                ) {
-                    Box(modifier = Modifier.fillMaxWidth(barraPercent).fillMaxHeight()
-                        .background(PratoCertoColors.Green, RoundedCornerShape(4.dp)))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(titulo, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+                Text(subtitulo, fontSize = 12.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(top = 2.dp))
+                if (barraPercent > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .padding(top = 4.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFEEEEEE))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(barraPercent)
+                                .fillMaxHeight()
+                                .background(PratoCertoColors.Green, RoundedCornerShape(4.dp))
+                        )
+                    }
                 }
-            }
-            if (extra != null) {
-                Text(extra, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PratoCertoColors.TextGreen, modifier = Modifier.padding(top = 4.dp))
+                if (extra != null) {
+                    Text(extra, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = PratoCertoColors.TextGreen, modifier = Modifier.padding(top = 4.dp))
+                }
             }
         }
     }

@@ -20,6 +20,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pratocerto.ui.theme.PratoCertoColors
 import com.example.pratocerto.viewmodel.AuthViewModel
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun TelaCadastroLogin(
     onLoginSucesso: () -> Unit,
@@ -52,7 +55,9 @@ fun TelaCadastroLogin(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Center
         ) {
             // Logo
@@ -61,20 +66,22 @@ fun TelaCadastroLogin(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("🥗", fontSize = 64.sp)
+                Spacer(Modifier.height(8.dp))
                 Text("Prato Certo", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1A1A1A))
-                Text("Comer bem com o que você tem.", fontSize = 12.sp, color = PratoCertoColors.TextGray)
+                Text("Comer bem com o que você tem.", fontSize = 13.sp, color = PratoCertoColors.TextGray)
             }
 
             if (!abaCadastro) {
                 // LOGIN
                 Label("E-MAIL")
-                PCInput(valor = emailLogin, onValorChange = { emailLogin = it }, placeholder = "exemplo@email.com")
+                PCInput(valor = emailLogin, onValorChange = { emailLogin = it }, placeholder = "exemplo@email.com", tipo = KeyboardType.Email)
                 Label("SENHA")
                 PCInput(valor = senhaLogin, onValorChange = { senhaLogin = it }, placeholder = "******", senha = true)
                 Spacer(Modifier.height(8.dp))
                 BtnDark(if (viewModel.carregando) "Entrando…" else "Entrar", !viewModel.carregando) {
                     viewModel.login(emailLogin, senhaLogin)
                 }
+                Spacer(Modifier.height(8.dp))
                 BtnOutline("Criar conta") { abaCadastro = true; viewModel.limparErro(); mensagemSucesso = null }
             } else {
                 // CADASTRO
@@ -92,18 +99,19 @@ fun TelaCadastroLogin(
                         abaCadastro = false
                     }
                 }
+                Spacer(Modifier.height(8.dp))
                 BtnOutline("Voltar ao login") { abaCadastro = false; viewModel.limparErro() }
             }
 
-            viewModel.erro?.let { Text(it, color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
-            mensagemSucesso?.let { Text(it, color = PratoCertoColors.TextGreen, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+            viewModel.erro?.let { Text(it, color = Color.Red, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp)) }
+            mensagemSucesso?.let { Text(it, color = PratoCertoColors.TextGreen, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp), fontWeight = FontWeight.SemiBold) }
         }
     }
 }
 
 @Composable
 fun Label(text: String) {
-    Text(text, fontSize = 11.sp, color = Color(0xFF888888), fontWeight = FontWeight.SemiBold,
+    Text(text, fontSize = 11.sp, color = Color(0xFF666666), fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
 }
 
@@ -118,16 +126,16 @@ fun PCInput(
     TextField(
         value = valor,
         onValueChange = onValorChange,
-        placeholder = { Text(placeholder, color = Color(0xFF666666)) },
-        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-        shape = RoundedCornerShape(16.dp),
+        placeholder = { Text(placeholder, color = Color(0xFF888888)) },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = PratoCertoColors.InputBg,
             unfocusedContainerColor = PratoCertoColors.InputBg,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
-            focusedTextColor = Color(0xFF333333),
-            unfocusedTextColor = Color(0xFF333333)
+            focusedTextColor = Color(0xFF222222),
+            unfocusedTextColor = Color(0xFF222222)
         ),
         keyboardOptions = KeyboardOptions(keyboardType = tipo),
         visualTransformation = if (senha) PasswordVisualTransformation() else VisualTransformation.None,
@@ -140,11 +148,11 @@ fun BtnDark(texto: String, habilitado: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         enabled = habilitado,
-        modifier = Modifier.fillMaxWidth().height(54.dp).padding(top = 8.dp),
+        modifier = Modifier.fillMaxWidth().height(50.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222222))
     ) {
-        Text(texto, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(texto, fontWeight = FontWeight.Bold, fontSize = 15.sp)
     }
 }
 
@@ -152,11 +160,12 @@ fun BtnDark(texto: String, habilitado: Boolean = true, onClick: () -> Unit) {
 fun BtnOutline(texto: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(54.dp).padding(top = 8.dp),
+        modifier = Modifier.fillMaxWidth().height(50.dp),
         shape = RoundedCornerShape(12.dp),
-        border = ButtonDefaults.outlinedButtonBorder.copy(width = 2.dp),
+        border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = PratoCertoColors.TextGreen)
     ) {
         Text(texto, fontWeight = FontWeight.Bold, fontSize = 15.sp)
     }
 }
+

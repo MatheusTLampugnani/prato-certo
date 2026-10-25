@@ -20,6 +20,9 @@ import androidx.compose.ui.unit.sp
 import com.example.pratocerto.ui.theme.PratoCertoColors
 import com.example.pratocerto.util.SessionManager
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 @Composable
 fun TelaMenuPrincipal(
     onIrOrcamento: () -> Unit,
@@ -38,41 +41,60 @@ fun TelaMenuPrincipal(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(PratoCertoColors.Green)
-                .padding(24.dp)
+                .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.RestaurantMenu, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.width(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.RestaurantMenu, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Prato Certo",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                     Text(
-                        "Prato Certo",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        "Olá, ${SessionManager.nomeUsuario.ifEmpty { "usuário" }}!",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
-                Text(
-                    "Olá, ${SessionManager.nomeUsuario.ifEmpty { "usuário" }}!",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(22.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = SessionManager.nomeUsuario.take(1).uppercase().ifEmpty { "U" },
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
             }
         }
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Spacer(Modifier.height(4.dp))
-
             Text(
                 "O que você quer fazer?",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF333333)
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1F2937)
             )
 
             CardMenu(
@@ -107,23 +129,27 @@ fun TelaMenuPrincipal(
                 onClick = onIrMetas
             )
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(16.dp))
 
             TextButton(
                 onClick = {
                     SessionManager.limpar()
                     onLogout()
                 },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ExitToApp,
                     contentDescription = null,
-                    tint = PratoCertoColors.TextGray
+                    tint = Color(0xFFD32F2F)
                 )
-                Spacer(Modifier.width(6.dp))
-                Text("Sair da conta", color = PratoCertoColors.TextGray, fontSize = 14.sp)
+                Spacer(Modifier.width(8.dp))
+                Text("Sair da conta", color = Color(0xFFD32F2F), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

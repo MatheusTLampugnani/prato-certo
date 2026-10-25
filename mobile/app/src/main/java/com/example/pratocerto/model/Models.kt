@@ -26,6 +26,12 @@ data class RespostaAlimentos(
     val dados: List<Alimento>? = null
 )
 
+data class RespostaBarcode(
+    val sucesso: Boolean,
+    val dado: Alimento? = null,
+    val erro: String? = null
+)
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 
 data class UsuarioRegistro(val nome: String, val email: String, val senha: String)
@@ -78,7 +84,8 @@ data class ItemLista(
     val id: Int? = null,
     val alimentos: AlimentoData? = null,
     @SerializedName("quantidade_gramas") val quantidadeGramas: Double = 0.0,
-    @SerializedName("preco_calculado") val precoCalculado: Double = 0.0
+    @SerializedName("preco_calculado") val precoCalculado: Double = 0.0,
+    val comprado: Boolean = false
 )
 
 data class CardapioItemData(
@@ -113,7 +120,17 @@ data class AdicionarItemRequest(
     val quantidade_gramas: Double
 )
 
+data class ToggleItemRequest(
+    val comprado: Boolean
+)
+
 data class RespostaAdicionarItem(
+    val sucesso: Boolean,
+    val mensagem: String? = null,
+    val erro: String? = null
+)
+
+data class RespostaPadrao(
     val sucesso: Boolean,
     val mensagem: String? = null,
     val erro: String? = null
