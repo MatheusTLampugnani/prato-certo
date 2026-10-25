@@ -1,16 +1,26 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 require('dotenv').config();
+<<<<<<< HEAD
 const jwt = require('jsonwebtoken');
 const supabase = require('./config/db');
 const TacoService = require('./services/tacoService');
 const OpenFoodFactsService = require('./services/openFoodFactsService');
 const precosConab = require('./data/precos_conab.json');
 const verificarAutenticacao = require('./middleware/auth');
+=======
+
+const authRoutes = require('./routes/authRoutes');
+const alimentosRoutes = require('./routes/alimentosRoutes');
+const orcamentoRoutes = require('./routes/orcamentoRoutes');
+const cardapioRoutes = require('./routes/cardapioRoutes');
+const listasRoutes = require('./routes/listasRoutes');
+const metasRoutes = require('./routes/metasRoutes');
+>>>>>>> 30af95bc5538e64c4491c68d3a9f17fbd2894dfa
 
 const app = express();
 app.use(express.json());
 
+<<<<<<< HEAD
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // ── Teste Banco ──────────────────────────────────────────────────────────
@@ -930,8 +940,16 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
 });
+=======
+app.use('/api', alimentosRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/orcamento', orcamentoRoutes);
+app.use('/api/cardapio', cardapioRoutes);
+app.use('/api/listas', listasRoutes);
+app.use('/api/metas', metasRoutes);
+>>>>>>> 30af95bc5538e64c4491c68d3a9f17fbd2894dfa
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Backend do Prato Certo rodando na porta ${PORT}`);
+    console.log(`Backend rodando porta ${PORT}`);
 });
