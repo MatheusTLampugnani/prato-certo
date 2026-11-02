@@ -10,7 +10,9 @@ function verificarAutenticacao(req, res, next) {
         return res.status(401).json({ sucesso: false, erro: 'Token de acesso não fornecido.' });
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.startsWith('Bearer ') || authHeader.startsWith('bearer ')
+        ? authHeader.slice(7).trim()
+        : authHeader.trim();
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);

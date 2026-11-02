@@ -1,26 +1,16 @@
 const express = require('express');
 require('dotenv').config();
-<<<<<<< HEAD
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const supabase = require('./config/db');
 const TacoService = require('./services/tacoService');
 const OpenFoodFactsService = require('./services/openFoodFactsService');
 const precosConab = require('./data/precos_conab.json');
 const verificarAutenticacao = require('./middleware/auth');
-=======
-
-const authRoutes = require('./routes/authRoutes');
-const alimentosRoutes = require('./routes/alimentosRoutes');
-const orcamentoRoutes = require('./routes/orcamentoRoutes');
-const cardapioRoutes = require('./routes/cardapioRoutes');
-const listasRoutes = require('./routes/listasRoutes');
-const metasRoutes = require('./routes/metasRoutes');
->>>>>>> 30af95bc5538e64c4491c68d3a9f17fbd2894dfa
 
 const app = express();
 app.use(express.json());
 
-<<<<<<< HEAD
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // ── Teste Banco ──────────────────────────────────────────────────────────
@@ -500,6 +490,10 @@ function montarCardapioEquilibrado(alimentosDisponiveis, dailyBudget, targetCal,
         { food: veg, gramas: 120 }
     ].filter(p => p.food);
 
+    if (cesta.length === 0 && foods.length > 0) {
+        cesta = foods.slice(0, Math.min(5, foods.length)).map(f => ({ food: f, gramas: 100 }));
+    }
+
     const calcTotais = (itens) => {
         let custo = 0, cal = 0, prot = 0;
         itens.forEach(i => {
@@ -634,6 +628,11 @@ app.post('/api/cardapio/gerar', verificarAutenticacao, async (req, res) => {
         res.status(201).json({
             sucesso: true,
             mensagem: 'Cardápio inteligente gerado com sucesso!',
+            lista: {
+                id: listaAtivaId,
+                titulo_lista: 'Cardápio Inteligente',
+                tipo: 'cardapio'
+            },
             resumo: {
                 lista_id: listaAtivaId,
                 total_itens: selectedItems.length,
@@ -940,14 +939,6 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
         res.status(500).json({ sucesso: false, erro: error.message });
     }
 });
-=======
-app.use('/api', alimentosRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/orcamento', orcamentoRoutes);
-app.use('/api/cardapio', cardapioRoutes);
-app.use('/api/listas', listasRoutes);
-app.use('/api/metas', metasRoutes);
->>>>>>> 30af95bc5538e64c4491c68d3a9f17fbd2894dfa
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -62,6 +62,17 @@ npm run dev
 
 > Configure o arquivo `.env` com as variáveis necessárias (veja `.env.example`).
 
+### Como executar os testes automatizados da API
+```bash
+npm test
+```
+*(Executa 16 testes automatizados validando autenticação, orçamentos, metas, geração de cardápio, checklists e Open Food Facts).*
+
+### Configuração de Rede (Mobile x Backend)
+- **Emulador Android**: Conecta em `http://10.0.2.2:3000/` (padrão configurado em `RetrofitInstance.kt`).
+- **Dispositivo Físico via USB**: Use `http://127.0.0.1:3000/` e execute no terminal do PC: `adb reverse tcp:3000 tcp:3000`.
+- **Dispositivo Físico via Wi-Fi**: Coloque o IP local do seu computador (ex: `http://192.168.x.x:3000/`).
+
 ---
 
 ## APIs Externas
