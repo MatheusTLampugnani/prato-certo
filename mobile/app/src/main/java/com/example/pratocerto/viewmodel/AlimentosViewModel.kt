@@ -79,6 +79,9 @@ class AlimentosViewModel : ViewModel() {
                 } else {
                     erro = resposta.erro ?: "Produto não encontrado no Open Food Facts para o código: $cod"
                 }
+            } catch (e: retrofit2.HttpException) {
+                erro = if (e.code() == 404) "Produto não encontrado no Open Food Facts para o código: $cod"
+                       else "Erro no servidor (HTTP ${e.code()})"
             } catch (e: Exception) {
                 erro = "Erro ao consultar código de barras: ${e.message}"
             } finally {

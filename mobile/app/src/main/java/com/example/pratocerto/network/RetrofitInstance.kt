@@ -6,7 +6,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
-    var BASE_URL = "http://127.0.0.1:3000/"
+    // 10.0.2.2 é o IP padrão que o Emulador Android usa para acessar o localhost do PC
+    var BASE_URL = "http://10.0.2.2:3000/"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

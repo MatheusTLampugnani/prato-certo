@@ -31,7 +31,7 @@ function obterPrecoConab(descricao) {
     return encontrado ? encontrado.preco_medio : 12.50;
 }
 
-app.post('/api/popular-banco', async (req, res) => {
+app.post('/api/popular-banco', verificarAutenticacao, async (req, res) => {
     try {
         const alimentosTaco = TacoService.alimentos;
         for (const alimento of alimentosTaco) {
@@ -90,7 +90,7 @@ app.get('/api/produtos/barcode/:codigo', async (req, res) => {
     try {
         const produto = await OpenFoodFactsService.buscarPorCodigoBarras(codigo);
         if (!produto) {
-            return res.status(404).json({ sucesso: false, erro: 'Produto não encontrado na base do Open Food Facts.' });
+            return res.json({ sucesso: false, erro: 'Produto não encontrado na base do Open Food Facts.' });
         }
         res.json({ sucesso: true, dado: produto });
     } catch (error) {
@@ -163,7 +163,17 @@ app.post('/api/auth/login', async (req, res) => {
 app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
     const usuario_id = req.usuarioId;
     const { valor, periodo } = req.body;
+    const numValor = Number(valor);
+
+    if (valor === undefined || valor === null || isNaN(numValor) || numValor <= 0) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe um valor de orçamento válido e maior que zero.' });
+    }
+
     const periodoNormalizado = (periodo || 'mensal').toString().trim().toLowerCase();
+    const periodosValidos = ['semanal', 'quinzenal', 'mensal'];
+    if (!periodosValidos.includes(periodoNormalizado)) {
+        return res.status(400).json({ sucesso: false, erro: 'Período inválido. Escolha entre semanal, quinzenal ou mensal.' });
+    }
 
     try {
         // 1. Verifica se o usuário já tem um orçamento salvo
@@ -178,7 +188,7 @@ app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
             // 2. Se já existir, atualiza o valor
             const { data, error: erroUpdate } = await supabase
                 .from('orcamentos')
-                .update({ valor, periodo: periodoNormalizado })
+                .update({ valor: numValor, periodo: periodoNormalizado })
                 .eq('usuario_id', usuario_id)
                 .select().single();
 
@@ -188,7 +198,7 @@ app.post('/api/orcamento', verificarAutenticacao, async (req, res) => {
             // 3. Se não existir, cria um novo registro
             const { data, error: erroInsert } = await supabase
                 .from('orcamentos')
-                .insert([{ usuario_id, valor, periodo: periodoNormalizado }])
+                .insert([{ usuario_id, valor: numValor, periodo: periodoNormalizado }])
                 .select().single();
 
             if (erroInsert) throw erroInsert;
@@ -289,13 +299,26 @@ app.post('/api/listas', verificarAutenticacao, async (req, res) => {
 
 app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
     const lista_id = req.params.id;
+    const usuario_id = req.usuarioId;
     const { alimento_id, quantidade_gramas } = req.body;
+    const numGramas = Number(quantidade_gramas);
 
-    if (!alimento_id || !quantidade_gramas) {
-        return res.status(400).json({ sucesso: false, erro: 'Informe o alimento_id e a quantidade_gramas.' });
+    if (!alimento_id || isNaN(numGramas) || numGramas <= 0) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe o alimento_id e uma quantidade_gramas maior que zero.' });
     }
 
     try {
+        const { data: lista, error: erroLista } = await supabase
+            .from('listas')
+            .select('id')
+            .eq('id', lista_id)
+            .eq('usuario_id', usuario_id)
+            .maybeSingle();
+
+        if (erroLista || !lista) {
+            return res.status(404).json({ sucesso: false, erro: 'Lista não encontrada ou acesso não autorizado.' });
+        }
+
         const { data: precoData, error: precoError } = await supabase
             .from('precos')
             .select('preco_medio')
@@ -304,14 +327,14 @@ app.post('/api/listas/:id/itens', verificarAutenticacao, async (req, res) => {
 
         let precoMedio = (precoData && !precoError) ? precoData.preco_medio : 0;
         // precoMedio é em R$/kg (1000g), logo o cálculo por grama divide por 1000
-        const preco_calculado = (precoMedio / 1000) * quantidade_gramas;
+        const preco_calculado = (precoMedio / 1000) * numGramas;
 
         const { data, error } = await supabase
             .from('lista_itens')
             .insert([{
                 lista_id,
                 alimento_id,
-                quantidade_gramas,
+                quantidade_gramas: numGramas,
                 preco_calculado: parseFloat(preco_calculado.toFixed(2))
             }])
             .select()
@@ -330,6 +353,17 @@ app.delete('/api/listas/:id', verificarAutenticacao, async (req, res) => {
     const usuario_id = req.usuarioId;
 
     try {
+        const { data: lista, error: erroBusca } = await supabase
+            .from('listas')
+            .select('id')
+            .eq('id', lista_id)
+            .eq('usuario_id', usuario_id)
+            .maybeSingle();
+
+        if (erroBusca || !lista) {
+            return res.status(404).json({ sucesso: false, erro: 'Lista não encontrada ou acesso não autorizado.' });
+        }
+
         await supabase.from('lista_itens').delete().eq('lista_id', lista_id);
         const { error } = await supabase.from('listas').delete().eq('id', lista_id).eq('usuario_id', usuario_id);
         if (error) throw error;
@@ -342,8 +376,30 @@ app.delete('/api/listas/:id', verificarAutenticacao, async (req, res) => {
 // ── Excluir Item da Lista ─────────────────────────────────────────────────
 app.delete('/api/listas/itens/:id', verificarAutenticacao, async (req, res) => {
     const item_id = req.params.id;
+    const usuario_id = req.usuarioId;
 
     try {
+        const { data: item, error: erroItem } = await supabase
+            .from('lista_itens')
+            .select('id, lista_id')
+            .eq('id', item_id)
+            .maybeSingle();
+
+        if (erroItem || !item) {
+            return res.status(404).json({ sucesso: false, erro: 'Item não encontrado.' });
+        }
+
+        const { data: lista, error: erroLista } = await supabase
+            .from('listas')
+            .select('id')
+            .eq('id', item.lista_id)
+            .eq('usuario_id', usuario_id)
+            .maybeSingle();
+
+        if (erroLista || !lista) {
+            return res.status(403).json({ sucesso: false, erro: 'Acesso não autorizado a esta lista.' });
+        }
+
         const { error } = await supabase.from('lista_itens').delete().eq('id', item_id);
         if (error) throw error;
         res.json({ sucesso: true, mensagem: 'Item removido da lista!' });
@@ -355,9 +411,31 @@ app.delete('/api/listas/itens/:id', verificarAutenticacao, async (req, res) => {
 // ── Alternar Status de Compra do Item (Checklist) ─────────────────────────
 app.patch('/api/listas/itens/:id/toggle', verificarAutenticacao, async (req, res) => {
     const item_id = req.params.id;
+    const usuario_id = req.usuarioId;
     const { comprado } = req.body;
 
     try {
+        const { data: item, error: erroItem } = await supabase
+            .from('lista_itens')
+            .select('id, lista_id')
+            .eq('id', item_id)
+            .maybeSingle();
+
+        if (erroItem || !item) {
+            return res.status(404).json({ sucesso: false, erro: 'Item não encontrado.' });
+        }
+
+        const { data: lista, error: erroLista } = await supabase
+            .from('listas')
+            .select('id')
+            .eq('id', item.lista_id)
+            .eq('usuario_id', usuario_id)
+            .maybeSingle();
+
+        if (erroLista || !lista) {
+            return res.status(403).json({ sucesso: false, erro: 'Acesso não autorizado a esta lista.' });
+        }
+
         const { data, error } = await supabase
             .from('lista_itens')
             .update({ comprado: Boolean(comprado) })
@@ -855,37 +933,51 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
     const { peso_atual, altura_cm, objetivo, peso_meta: reqPesoMeta } = req.body;
     const usuario_id = req.usuarioId;
 
-    if (!peso_atual || !altura_cm || !objetivo) {
-        return res.status(400).json({
-            sucesso: false,
-            erro: 'Informe peso_atual, altura_cm e objetivo.'
-        });
+    const numPeso = Number(peso_atual);
+    const numAltura = Number(altura_cm);
+    const objetivosValidos = ['emagrecer', 'engordar', 'manter'];
+    const objNormalizado = (objetivo || '').toString().trim().toLowerCase();
+
+    if (isNaN(numPeso) || numPeso <= 20 || numPeso > 300) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe um peso atual válido (entre 20 e 300 kg).' });
+    }
+    if (isNaN(numAltura) || numAltura <= 50 || numAltura > 260) {
+        return res.status(400).json({ sucesso: false, erro: 'Informe uma altura válida (entre 50 e 260 cm).' });
+    }
+    if (!objetivosValidos.includes(objNormalizado)) {
+        return res.status(400).json({ sucesso: false, erro: 'Objetivo inválido. Escolha entre emagrecer, manter ou engordar.' });
+    }
+    if (reqPesoMeta !== undefined && reqPesoMeta !== null) {
+        const numPesoMeta = Number(reqPesoMeta);
+        if (isNaN(numPesoMeta) || numPesoMeta <= 20 || numPesoMeta > 300) {
+            return res.status(400).json({ sucesso: false, erro: 'Informe um peso meta válido (entre 20 e 300 kg).' });
+        }
     }
 
     const idade = 25;
-    const tmb = 88.36 + (13.4 * peso_atual) + (4.8 * altura_cm) - (5.7 * idade);
+    const tmb = 88.36 + (13.4 * numPeso) + (4.8 * numAltura) - (5.7 * idade);
     const fatorAtividade = 1.375; // levemente ativo
 
     let calorias, proteinas, carboidratos, gorduras, peso_meta;
 
-    if (objetivo === 'emagrecer') {
+    if (objNormalizado === 'emagrecer') {
         calorias = Math.round(tmb * fatorAtividade * 0.80); // déficit 20%
-        proteinas = Math.round(peso_atual * 2.2);
-        gorduras = Math.round(peso_atual * 0.8);
+        proteinas = Math.round(numPeso * 2.2);
+        gorduras = Math.round(numPeso * 0.8);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta = reqPesoMeta ? reqPesoMeta : parseFloat((peso_atual * 0.90).toFixed(1));
-    } else if (objetivo === 'engordar') {
+        peso_meta = reqPesoMeta ? Number(reqPesoMeta) : parseFloat((numPeso * 0.90).toFixed(1));
+    } else if (objNormalizado === 'engordar') {
         calorias = Math.round(tmb * fatorAtividade * 1.15); // superávit 15%
-        proteinas = Math.round(peso_atual * 2.0);
-        gorduras = Math.round(peso_atual * 1.0);
+        proteinas = Math.round(numPeso * 2.0);
+        gorduras = Math.round(numPeso * 1.0);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta = reqPesoMeta ? reqPesoMeta : parseFloat((peso_atual * 1.05).toFixed(1));
+        peso_meta = reqPesoMeta ? Number(reqPesoMeta) : parseFloat((numPeso * 1.05).toFixed(1));
     } else { // manter
         calorias = Math.round(tmb * fatorAtividade);
-        proteinas = Math.round(peso_atual * 1.8);
-        gorduras = Math.round(peso_atual * 0.9);
+        proteinas = Math.round(numPeso * 1.8);
+        gorduras = Math.round(numPeso * 0.9);
         carboidratos = Math.round((calorias - proteinas * 4 - gorduras * 9) / 4);
-        peso_meta = reqPesoMeta ? reqPesoMeta : peso_atual;
+        peso_meta = reqPesoMeta ? Number(reqPesoMeta) : numPeso;
     }
 
     if (carboidratos < 0) carboidratos = 30;
@@ -899,10 +991,10 @@ app.post('/api/metas', verificarAutenticacao, async (req, res) => {
 
         const payload = {
             usuario_id,
-            peso_atual: parseFloat(peso_atual),
-            altura_cm: parseFloat(altura_cm),
+            peso_atual: numPeso,
+            altura_cm: numAltura,
             peso_meta,
-            objetivo,
+            objetivo: objNormalizado,
             calorias_dia: calorias,
             proteinas_dia: proteinas,
             carboidratos_dia: carboidratos,

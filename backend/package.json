@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node test_endpoints.js"
+    "test": "node --test test_qa_suite.js && node test_endpoints.js && node test_security.js"
   },
   "keywords": [],
   "author": "",
