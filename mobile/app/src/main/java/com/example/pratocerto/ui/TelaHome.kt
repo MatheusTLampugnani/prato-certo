@@ -145,13 +145,6 @@ fun TelaHome(
                 onClick = onIrLista
             )
 
-            // Seção de Dicas, Notícias e Hábitos Saudáveis com Economia
-            SecaoCardsDicas(
-                onIrOrcamento = onIrOrcamento,
-                onIrCardapio = onIrCardapio,
-                onIrPesquisa = onIrPesquisa
-            )
-
             // Botões rápidos
             Row(
                 modifier = Modifier
@@ -181,6 +174,15 @@ fun TelaHome(
                     Text("Ver Cardápio", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
+
+            // Seção de Dicas, Notícias e Hábitos Saudáveis (posicionada logo acima da barra de navegação)
+            SecaoCardsDicas(
+                onIrOrcamento = onIrOrcamento,
+                onIrCardapio = onIrCardapio,
+                onIrPesquisa = onIrPesquisa
+            )
+
+            Spacer(Modifier.height(16.dp))
         }
 
         // Nav flutuante
