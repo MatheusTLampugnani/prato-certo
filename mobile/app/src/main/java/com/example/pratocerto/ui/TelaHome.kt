@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pratocerto.ui.theme.PratoCertoColors
+import com.example.pratocerto.ui.components.SecaoCardsDicas
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pratocerto.viewmodel.CardapioViewModel
@@ -142,6 +143,13 @@ fun TelaHome(
                 badge = badgeLista,
                 extra = extraLista,
                 onClick = onIrLista
+            )
+
+            // Seção de Dicas, Notícias e Hábitos Saudáveis com Economia
+            SecaoCardsDicas(
+                onIrOrcamento = onIrOrcamento,
+                onIrCardapio = onIrCardapio,
+                onIrPesquisa = onIrPesquisa
             )
 
             // Botões rápidos
