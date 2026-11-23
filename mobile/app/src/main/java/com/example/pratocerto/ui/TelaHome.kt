@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pratocerto.ui.theme.PratoCertoColors
+import com.example.pratocerto.ui.components.SecaoCardsDicas
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pratocerto.viewmodel.CardapioViewModel
@@ -173,6 +174,15 @@ fun TelaHome(
                     Text("Ver Cardápio", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
+
+            // Seção de Dicas, Notícias e Hábitos Saudáveis (posicionada logo acima da barra de navegação)
+            SecaoCardsDicas(
+                onIrOrcamento = onIrOrcamento,
+                onIrCardapio = onIrCardapio,
+                onIrPesquisa = onIrPesquisa
+            )
+
+            Spacer(Modifier.height(16.dp))
         }
 
         // Nav flutuante
