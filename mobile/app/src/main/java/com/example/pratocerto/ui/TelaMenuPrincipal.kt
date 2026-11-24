@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -25,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun TelaMenuPrincipal(
+    onVoltar: () -> Unit = {},
     onIrOrcamento: () -> Unit,
     onIrPesquisa: () -> Unit,
     onIrCardapio: () -> Unit,
@@ -41,30 +43,43 @@ fun TelaMenuPrincipal(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(PratoCertoColors.Green)
-                .padding(horizontal = 24.dp, vertical = 24.dp)
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.RestaurantMenu, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Prato Certo",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onVoltar,
+                        modifier = Modifier.size(40.dp).padding(end = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar à tela inicial",
+                            tint = Color.White
                         )
                     }
-                    Text(
-                        "Olá, ${SessionManager.nomeUsuario.ifEmpty { "usuário" }}!",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.RestaurantMenu, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Prato Certo",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        Text(
+                            "Olá, ${SessionManager.nomeUsuario.ifEmpty { "usuário" }}!",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
 
                 Box(
@@ -87,6 +102,7 @@ fun TelaMenuPrincipal(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {

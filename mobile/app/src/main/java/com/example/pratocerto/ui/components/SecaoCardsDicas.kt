@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pratocerto.model.DicaOuNoticia
@@ -221,7 +222,8 @@ private fun CardDicaItem(
 ) {
     Card(
         modifier = Modifier
-            .width(260.dp)
+            .width(268.dp)
+            .height(192.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -229,7 +231,7 @@ private fun CardDicaItem(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(16.dp)
         ) {
             // Tag Categoria + Ícone
@@ -276,7 +278,8 @@ private fun CardDicaItem(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1F2937),
-                maxLines = 2
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -287,10 +290,11 @@ private fun CardDicaItem(
                 fontSize = 12.sp,
                 color = Color(0xFF6B7280),
                 lineHeight = 16.sp,
-                maxLines = 3
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             // Link "Ler mais"
             Row(

@@ -117,6 +117,12 @@ fun NavGraph() {
 
         composable(Rotas.PERFIL) {
             TelaMenuPrincipal(
+                onVoltar = {
+                    navController.navigate(Rotas.HOME) {
+                        popUpTo(Rotas.HOME) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
                 onIrOrcamento = { navController.navigate(Rotas.ORCAMENTO) },
                 onIrPesquisa  = { navController.navigate(Rotas.PESQUISA) },
                 onIrCardapio  = { navController.navigate(Rotas.CARDAPIO) },

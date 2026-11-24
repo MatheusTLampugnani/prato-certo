@@ -59,21 +59,37 @@ fun TelaPesquisaAlimentos(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = 100.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(bottom = 100.dp)
+        ) {
 
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onVoltar) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color(0xFF333333))
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Icon(Icons.Default.Kitchen, contentDescription = null, tint = Color(0xFF333333), modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Alimentos & Código de Barras", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Alimentos & Código de Barras",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
                 }
                 IconButton(onClick = {
                     scanner.startScan()
