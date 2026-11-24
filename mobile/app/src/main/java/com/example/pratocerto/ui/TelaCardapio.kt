@@ -47,7 +47,7 @@ fun TelaCardapio(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = 90.dp)) {
+        Column(modifier = Modifier.fillMaxSize().navigationBarsPadding().padding(bottom = 90.dp)) {
 
             // Top Bar
             Row(

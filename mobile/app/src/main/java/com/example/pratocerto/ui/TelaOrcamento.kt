@@ -53,9 +53,12 @@ fun TelaOrcamento(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(PratoCertoColors.Background)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
             .imePadding()
-            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         IconButton(onClick = onVoltar, modifier = Modifier.size(44.dp)) {
             Icon(

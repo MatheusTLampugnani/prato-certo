@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pratocerto.ui.theme.PratoCertoColors
@@ -77,12 +78,19 @@ fun TelaHome(
     val extraLista = if (gastoEstimado > 0) "Gasto est.: R$ ${"%.2f".format(gastoEstimado)}" else null
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 100.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(bottom = 104.dp)
+        ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -156,22 +164,36 @@ fun TelaHome(
                     onClick = onIrPesquisa,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp),
                     border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = PratoCertoColors.TextGreen)
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Buscar Alimentos", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(
+                        "Buscar Alimentos",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Button(
                     onClick = onIrCardapio,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222222))
                 ) {
                     Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Ver Cardápio", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(
+                        "Ver Cardápio",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
@@ -214,40 +236,60 @@ fun InfoCard(
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Box(contentAlignment = Alignment.TopEnd) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(PratoCertoColors.IconBoxBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icone, contentDescription = null, tint = PratoCertoColors.TextGreen, modifier = Modifier.size(26.dp))
-                }
-                if (badge != null) {
-                    val corBadge = if (badge == "OK") PratoCertoColors.TextGreen else Color(0xFFE53935)
-                    Box(
-                        modifier = Modifier
-                            .offset(x = 6.dp, y = (-6).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(badge, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = corBadge)
-                    }
-                }
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(PratoCertoColors.IconBoxBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icone, contentDescription = null, tint = PratoCertoColors.TextGreen, modifier = Modifier.size(26.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(titulo, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
-                Text(subtitulo, fontSize = 12.sp, color = PratoCertoColors.TextGray, modifier = Modifier.padding(top = 2.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = titulo,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1F2937),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (badge != null) {
+                        val isOk = badge == "OK"
+                        val corBadge = if (isOk) PratoCertoColors.TextGreen else Color(0xFFD32F2F)
+                        val corFundoBadge = if (isOk) Color(0xFFEAF3D8) else Color(0xFFFFEBEE)
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(corFundoBadge)
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(badge, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = corBadge)
+                        }
+                    }
+                }
+                Text(
+                    text = subtitulo,
+                    fontSize = 12.sp,
+                    color = PratoCertoColors.TextGray,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
                 if (barraPercent > 0f) {
+                    val corBarra = if (badge == "ESTOUROU") Color(0xFFE53935) else PratoCertoColors.Green
                     Box(
                         modifier = Modifier
+                            .padding(top = 8.dp)
                             .fillMaxWidth()
                             .height(6.dp)
-                            .padding(top = 4.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xFFEEEEEE))
                     ) {
@@ -255,7 +297,7 @@ fun InfoCard(
                             modifier = Modifier
                                 .fillMaxWidth(barraPercent)
                                 .fillMaxHeight()
-                                .background(PratoCertoColors.Green, RoundedCornerShape(4.dp))
+                                .background(corBarra, RoundedCornerShape(4.dp))
                         )
                     }
                 }

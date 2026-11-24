@@ -38,13 +38,19 @@ fun TelaLista(
     LaunchedEffect(Unit) { viewModel.carregarCardapio() }
 
     Box(modifier = Modifier.fillMaxSize().background(PratoCertoColors.Background)) {
-        Column(modifier = Modifier.fillMaxSize().padding(bottom = 100.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(bottom = 100.dp)
+        ) {
 
             // Cabeçalho Superior
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

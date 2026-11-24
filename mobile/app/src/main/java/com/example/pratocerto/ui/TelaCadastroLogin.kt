@@ -55,7 +55,9 @@ fun TelaCadastroLogin(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
                 .imePadding()
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Center
